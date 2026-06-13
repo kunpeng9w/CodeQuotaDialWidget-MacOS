@@ -1,0 +1,68 @@
+// swift-tools-version: 6.0
+
+import PackageDescription
+
+let package = Package(
+    name: "CodeQuotaDialWidget",
+    platforms: [
+        .macOS(.v14)
+    ],
+    products: [
+        .library(
+            name: "CodexQuotaCore",
+            targets: ["CodexQuotaCore"]
+        ),
+        .library(
+            name: "CodexQuotaDialWidget",
+            targets: ["CodexQuotaDialWidget"]
+        ),
+        .executable(
+            name: "CodexQuotaSnapshotTool",
+            targets: ["CodexQuotaSnapshotTool"]
+        ),
+        .library(
+            name: "GLMQuotaCore",
+            targets: ["GLMQuotaCore"]
+        ),
+        .library(
+            name: "GLMQuotaDialWidget",
+            targets: ["GLMQuotaDialWidget"]
+        ),
+        .executable(
+            name: "GLMQuotaSnapshotTool",
+            targets: ["GLMQuotaSnapshotTool"]
+        )
+    ],
+    targets: [
+        .target(
+            name: "CodexQuotaCore"
+        ),
+        .target(
+            name: "CodexQuotaDialWidget",
+            dependencies: ["CodexQuotaCore"]
+        ),
+        .executableTarget(
+            name: "CodexQuotaSnapshotTool",
+            dependencies: ["CodexQuotaCore"]
+        ),
+        .testTarget(
+            name: "CodexQuotaCoreTests",
+            dependencies: ["CodexQuotaCore"]
+        ),
+        .target(
+            name: "GLMQuotaCore"
+        ),
+        .target(
+            name: "GLMQuotaDialWidget",
+            dependencies: ["GLMQuotaCore"]
+        ),
+        .executableTarget(
+            name: "GLMQuotaSnapshotTool",
+            dependencies: ["GLMQuotaCore"]
+        ),
+        .testTarget(
+            name: "GLMQuotaCoreTests",
+            dependencies: ["GLMQuotaCore"]
+        )
+    ]
+)

@@ -1,0 +1,6 @@
+local-config.env
+.DS_Store
+.build/
+.swiftpm/
+Runtime/*/logs/
+
