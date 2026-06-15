@@ -64,14 +64,16 @@ import Testing
     {
       "claudeAiOauth": {
         "accessToken": "token-a",
-        "expiresAt": 4102444800000
+        "expiresAt": 4102444800000,
+        "subscriptionType": "pro"
       }
     }
     """
 
-    let token = try ClaudeQuotaCollector.parseCredentialsData(Data(credentials.utf8))
+    let parsed = try ClaudeQuotaCollector.parseCredentialsData(Data(credentials.utf8))
 
-    #expect(token == "token-a")
+    #expect(parsed.accessToken == "token-a")
+    #expect(parsed.planType == "pro")
 }
 
 @Test func parsesDotKeyCredentials() throws {
@@ -84,9 +86,9 @@ import Testing
     }
     """
 
-    let token = try ClaudeQuotaCollector.parseCredentialsData(Data(credentials.utf8))
+    let parsed = try ClaudeQuotaCollector.parseCredentialsData(Data(credentials.utf8))
 
-    #expect(token == "token-b")
+    #expect(parsed.accessToken == "token-b")
 }
 
 @Test func marksErrorOrEmptySnapshotsAsRefreshFailures() {

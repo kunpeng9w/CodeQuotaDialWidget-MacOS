@@ -4,17 +4,20 @@ public struct ClaudeQuotaSnapshot: Codable, Equatable, Sendable {
     public var generatedAt: Date
     public var fiveHour: ClaudeQuotaWindow?
     public var weekly: ClaudeQuotaWindow?
+    public var planType: String?
     public var error: String?
 
     public init(
         generatedAt: Date,
         fiveHour: ClaudeQuotaWindow? = nil,
         weekly: ClaudeQuotaWindow? = nil,
+        planType: String? = nil,
         error: String? = nil
     ) {
         self.generatedAt = generatedAt
         self.fiveHour = fiveHour
         self.weekly = weekly
+        self.planType = planType
         self.error = error
     }
 

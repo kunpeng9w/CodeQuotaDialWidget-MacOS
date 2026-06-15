@@ -132,9 +132,20 @@ public struct CodexQuotaCollector: Sendable {
             }
         }
 
-        let snapshot = CodexQuotaSnapshot(generatedAt: Date(), fiveHour: fiveHour, weekly: weekly)
+        let snapshot = CodexQuotaSnapshot(
+            generatedAt: Date(),
+            fiveHour: fiveHour,
+            weekly: weekly,
+            planType: envelope.planType
+        )
         guard snapshot.hasCompleteDisplayData else {
-            return CodexQuotaSnapshot(generatedAt: Date(), fiveHour: fiveHour, weekly: weekly, error: "quota windows not found")
+            return CodexQuotaSnapshot(
+                generatedAt: Date(),
+                fiveHour: fiveHour,
+                weekly: weekly,
+                planType: envelope.planType,
+                error: "quota windows not found"
+            )
         }
         return snapshot
     }
@@ -197,9 +208,11 @@ private struct CodexTokens: Decodable {
 }
 
 private struct CodexUsageEnvelope: Decodable {
+    var planType: String?
     var rateLimit: CodexRateLimit?
 
     enum CodingKeys: String, CodingKey {
+        case planType = "plan_type"
         case rateLimit = "rate_limit"
     }
 }

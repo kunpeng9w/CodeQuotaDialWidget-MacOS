@@ -6,6 +6,7 @@ import Testing
 @Test func parsesFiveHourAndWeeklyLimits() throws {
     let body = """
     {
+      "plan_type": "plus",
       "rate_limit": {
         "primary_window": {
           "used_percent": 27,
@@ -29,6 +30,7 @@ import Testing
     #expect(snapshot.weekly?.remainingPercent == 58)
     #expect(snapshot.weekly?.usedPercent == 42)
     #expect(snapshot.weekly?.windowDurationMins == 10_080)
+    #expect(snapshot.planType == "plus")
 }
 
 @Test func clampsRemainingPercent() throws {
@@ -54,9 +56,10 @@ import Testing
 }
 
 @Test func marksMissingWindowsAsError() throws {
-    let snapshot = try CodexQuotaCollector.parseUsageResponse(#"{"credits":{"has_credits":false}}"#)
+    let snapshot = try CodexQuotaCollector.parseUsageResponse(#"{"plan_type":"pro","credits":{"has_credits":false}}"#)
 
     #expect(snapshot.error == "quota windows not found")
+    #expect(snapshot.planType == "pro")
     #expect(snapshot.isRefreshFailure)
 }
 

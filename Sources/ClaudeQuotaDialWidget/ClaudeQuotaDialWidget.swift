@@ -97,6 +97,17 @@ private struct HeaderView: View {
                 .font(.headline)
                 .lineLimit(1)
 
+            if let plan = snapshot.planType {
+                Text(plan.uppercased())
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.blue)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Color.blue.opacity(0.14))
+                    .clipShape(Capsule())
+                    .lineLimit(1)
+            }
+
             Spacer(minLength: 8)
 
             Text(updatedText(snapshot.generatedAt))

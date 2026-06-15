@@ -5,9 +5,10 @@ public struct ClaudeQuotaCollector: Sendable {
 
     public func collect(now: Date = Date()) -> ClaudeQuotaSnapshot {
         do {
-            let token = try Self.readAccessToken()
-            let responseBody = try fetchQuota(accessToken: token)
+            let credentials = try Self.readCredentials()
+            let responseBody = try fetchQuota(accessToken: credentials.accessToken)
             var snapshot = try Self.parseResponse(responseBody)
+            snapshot.planType = credentials.planType
             snapshot.generatedAt = now
             return snapshot
         } catch {
@@ -15,14 +16,14 @@ public struct ClaudeQuotaCollector: Sendable {
         }
     }
 
-    static func readAccessToken() throws -> String {
-        if let token = try readAccessTokenFromKeychain() {
-            return token
+    static func readCredentials() throws -> ClaudeOAuthCredentials {
+        if let credentials = try readCredentialsFromKeychain() {
+            return credentials
         }
-        return try readAccessTokenFromFile()
+        return try readCredentialsFromFile()
     }
 
-    private static func readAccessTokenFromKeychain() throws -> String? {
+    private static func readCredentialsFromKeychain() throws -> ClaudeOAuthCredentials? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
         process.arguments = ["find-generic-password", "-s", "Claude Code-credentials", "-w"]
@@ -45,7 +46,7 @@ public struct ClaudeQuotaCollector: Sendable {
         return try parseCredentialsData(data)
     }
 
-    private static func readAccessTokenFromFile() throws -> String {
+    private static func readCredentialsFromFile() throws -> ClaudeOAuthCredentials {
         let credentialsURL = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".claude", isDirectory: true)
             .appendingPathComponent(".credentials.json")
@@ -58,7 +59,7 @@ public struct ClaudeQuotaCollector: Sendable {
         return try parseCredentialsData(data)
     }
 
-    static func parseCredentialsData(_ data: Data, now: Date = Date()) throws -> String {
+    static func parseCredentialsData(_ data: Data, now: Date = Date()) throws -> ClaudeOAuthCredentials {
         let credentials = try JSONDecoder().decode(ClaudeCredentials.self, from: data)
         guard let entry = credentials.claudeAiOauth ?? credentials.claudeDotAiOauth else {
             throw ClaudeQuotaError.invalidCredentials("OAuth entry not found")
@@ -69,7 +70,7 @@ public struct ClaudeQuotaCollector: Sendable {
         if let expiresAt = entry.expiresAt, expiresAt.date < now {
             throw ClaudeQuotaError.invalidCredentials("OAuth token has expired")
         }
-        return token
+        return ClaudeOAuthCredentials(accessToken: token, planType: entry.subscriptionType)
     }
 
     private func fetchQuota(accessToken: String) throws -> String {
@@ -120,10 +121,21 @@ public struct ClaudeQuotaCollector: Sendable {
             weekly: envelope.sevenDay?.window
         )
         guard snapshot.hasCompleteDisplayData else {
-            return ClaudeQuotaSnapshot(generatedAt: Date(), fiveHour: snapshot.fiveHour, weekly: snapshot.weekly, error: "quota windows not found")
+            return ClaudeQuotaSnapshot(
+                generatedAt: Date(),
+                fiveHour: snapshot.fiveHour,
+                weekly: snapshot.weekly,
+                planType: snapshot.planType,
+                error: "quota windows not found"
+            )
         }
         return snapshot
     }
+}
+
+struct ClaudeOAuthCredentials: Equatable, Sendable {
+    var accessToken: String
+    var planType: String?
 }
 
 private enum ClaudeQuotaError: Error, LocalizedError {
@@ -156,6 +168,7 @@ private struct ClaudeCredentials: Decodable {
 private struct ClaudeOAuthEntry: Decodable {
     var accessToken: String?
     var expiresAt: FlexibleExpiration?
+    var subscriptionType: String?
 }
 
 struct FlexibleExpiration: Decodable {

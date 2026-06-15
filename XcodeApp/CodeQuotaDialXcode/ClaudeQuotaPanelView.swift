@@ -16,6 +16,15 @@ struct ClaudeQuotaPanelView: View {
             HStack(alignment: .firstTextBaseline) {
                 Text("Claude 额度")
                     .font(.title3.weight(.semibold))
+                if let plan = snapshot?.planType {
+                    Text(plan.uppercased())
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.blue)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color.blue.opacity(0.14))
+                        .clipShape(Capsule())
+                }
                 Spacer()
                 Text(snapshot.map { "更新 \(timeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
                     .font(.caption)
