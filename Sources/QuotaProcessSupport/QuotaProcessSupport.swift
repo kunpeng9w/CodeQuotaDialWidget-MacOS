@@ -1,5 +1,81 @@
 import Foundation
 
+public struct SnapshotStore<Snapshot: Codable & Sendable>: Sendable {
+    public typealias DecoderFactory = @Sendable () -> JSONDecoder
+    public typealias EncoderFactory = @Sendable () -> JSONEncoder
+
+    public var url: URL
+
+    private let makeDecoder: DecoderFactory
+    private let makeEncoder: EncoderFactory
+
+    public init(url: URL) {
+        self.init(
+            url: url,
+            makeDecoder: Self.makeISO8601Decoder,
+            makeEncoder: Self.makeISO8601Encoder
+        )
+    }
+
+    public init(
+        url: URL,
+        makeDecoder: @escaping DecoderFactory
+    ) {
+        self.init(
+            url: url,
+            makeDecoder: makeDecoder,
+            makeEncoder: Self.makeISO8601Encoder
+        )
+    }
+
+    public init(
+        url: URL,
+        makeDecoder: @escaping DecoderFactory,
+        makeEncoder: @escaping EncoderFactory
+    ) {
+        self.url = url
+        self.makeDecoder = makeDecoder
+        self.makeEncoder = makeEncoder
+    }
+
+    public static func defaultURL(fileName: String, appGroupIdentifier: String) -> URL {
+        if let appGroupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
+            return appGroupURL.appendingPathComponent(fileName)
+        }
+
+        return FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Group Containers", isDirectory: true)
+            .appendingPathComponent(appGroupIdentifier, isDirectory: true)
+            .appendingPathComponent(fileName)
+    }
+
+    public func load() throws -> Snapshot {
+        let data = try Data(contentsOf: url)
+        return try makeDecoder().decode(Snapshot.self, from: data)
+    }
+
+    public func save(_ snapshot: Snapshot) throws {
+        let directory = url.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+        let data = try makeEncoder().encode(snapshot)
+        try data.write(to: url, options: .atomic)
+    }
+
+    private static func makeISO8601Decoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }
+
+    private static func makeISO8601Encoder() -> JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return encoder
+    }
+}
+
 public struct QuotaProcessResult: Sendable {
     public var status: Int
     public var stdout: Data

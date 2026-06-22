@@ -1,41 +1,33 @@
 import Foundation
+import QuotaProcessSupport
 
 public struct CodexQuotaSnapshotStore: Sendable {
     public static let fileName = "codex_quota_snapshot.json"
     public static let appGroupIdentifier = CodexQuotaAppGroup.identifier
 
-    public var url: URL
+    private var store: SnapshotStore<CodexQuotaSnapshot>
+
+    public var url: URL {
+        get { store.url }
+        set { store.url = newValue }
+    }
 
     public init(url: URL = CodexQuotaSnapshotStore.defaultURL()) {
-        self.url = url
+        store = SnapshotStore(url: url)
     }
 
     public static func defaultURL() -> URL {
-        if let appGroupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
-            return appGroupURL.appendingPathComponent(fileName)
-        }
-
-        return FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Group Containers", isDirectory: true)
-            .appendingPathComponent(appGroupIdentifier, isDirectory: true)
-            .appendingPathComponent(fileName)
+        SnapshotStore<CodexQuotaSnapshot>.defaultURL(
+            fileName: fileName,
+            appGroupIdentifier: appGroupIdentifier
+        )
     }
 
     public func load() throws -> CodexQuotaSnapshot {
-        let data = try Data(contentsOf: url)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(CodexQuotaSnapshot.self, from: data)
+        try store.load()
     }
 
     public func save(_ snapshot: CodexQuotaSnapshot) throws {
-        let directory = url.deletingLastPathComponent()
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let data = try encoder.encode(snapshot)
-        try data.write(to: url, options: .atomic)
+        try store.save(snapshot)
     }
 }

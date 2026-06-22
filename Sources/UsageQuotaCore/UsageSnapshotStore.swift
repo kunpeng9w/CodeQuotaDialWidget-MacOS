@@ -1,40 +1,41 @@
 import Foundation
+import QuotaProcessSupport
 
 public struct UsageSnapshotStore: Sendable {
     public static let fileName = "usage_quota_snapshot.json"
     public static let appGroupIdentifier = UsageQuotaAppGroup.identifier
 
-    public var url: URL
+    private var store: SnapshotStore<UsageSnapshot>
+
+    public var url: URL {
+        get { store.url }
+        set { store.url = newValue }
+    }
 
     public init(url: URL = UsageSnapshotStore.defaultURL()) {
-        self.url = url
+        store = SnapshotStore(
+            url: url,
+            makeDecoder: Self.makeDecoder,
+            makeEncoder: Self.makeEncoder
+        )
     }
 
     public static func defaultURL() -> URL {
-        if let appGroupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
-            return appGroupURL.appendingPathComponent(fileName)
-        }
-
-        return FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Group Containers", isDirectory: true)
-            .appendingPathComponent(appGroupIdentifier, isDirectory: true)
-            .appendingPathComponent(fileName)
+        SnapshotStore<UsageSnapshot>.defaultURL(
+            fileName: fileName,
+            appGroupIdentifier: appGroupIdentifier
+        )
     }
 
     public func load() throws -> UsageSnapshot {
-        let data = try Data(contentsOf: url)
-        return try Self.decoder.decode(UsageSnapshot.self, from: data)
+        try store.load()
     }
 
     public func save(_ snapshot: UsageSnapshot) throws {
-        let directory = url.deletingLastPathComponent()
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-
-        let data = try Self.encoder.encode(snapshot)
-        try data.write(to: url, options: .atomic)
+        try store.save(snapshot)
     }
 
-    private static let decoder: JSONDecoder = {
+    private static func makeDecoder() -> JSONDecoder {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
@@ -45,14 +46,14 @@ public struct UsageSnapshotStore: Sendable {
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO8601 date: \(value)")
         }
         return decoder
-    }()
+    }
 
-    private static let encoder: JSONEncoder = {
+    private static func makeEncoder() -> JSONEncoder {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return encoder
-    }()
+    }
 
     private static func parseISO8601Date(_ value: String) -> Date? {
         let fractional = ISO8601DateFormatter()

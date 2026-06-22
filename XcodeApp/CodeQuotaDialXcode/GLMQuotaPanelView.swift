@@ -42,7 +42,7 @@ struct GLMQuotaPanelView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .navigationTitle("GLM 额度")
-        .navigationSubtitle(snapshot.map { "更新于 \(timeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
+        .navigationSubtitle(snapshot.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 RefreshButton(isRefreshing: isRefreshing) { await refresh() }
@@ -133,39 +133,24 @@ struct GLMQuotaPanelView: View {
     }
 
     private func loadSnapshot() {
-        do {
-            snapshot = try GLMQuotaSnapshotStore().load()
-            errorText = snapshot?.error
-        } catch {
-            errorText = "暂无额度快照，请先刷新。"
-        }
+        let state = loadQuotaPanelSnapshot(from: GLMQuotaSnapshotStore())
+        snapshot = state.snapshot
+        errorText = state.errorText
     }
 
     private func refresh() async {
         isRefreshing = true
         defer { isRefreshing = false }
 
-        let newSnapshot = await Task.detached {
+        let state = await refreshQuotaPanelSnapshot(
+            store: GLMQuotaSnapshotStore(),
+            currentSnapshot: snapshot,
+            fallbackReason: "未返回额度窗口"
+        ) {
             GLMQuotaCollector().collect()
-        }.value
-
-        do {
-            let store = GLMQuotaSnapshotStore()
-
-            if newSnapshot.isRefreshFailure, let previous = snapshot ?? (try? store.load()) {
-                let reason = newSnapshot.error ?? "未返回额度窗口"
-                snapshot = previous
-                errorText = "刷新失败，保留 \(timeFormatter.string(from: previous.generatedAt)) 的数据：\(reason)"
-                return
-            }
-
-            try store.save(newSnapshot)
-            WidgetCenter.shared.reloadAllTimelines()
-            snapshot = newSnapshot
-            errorText = newSnapshot.error
-        } catch {
-            errorText = "保存额度快照失败：\(error.localizedDescription)"
         }
+        snapshot = state.snapshot
+        errorText = state.errorText
     }
 }
 
@@ -192,10 +177,3 @@ extension QuotaStatModel {
         )
     }
 }
-
-private let timeFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "zh_CN")
-    formatter.dateFormat = "HH:mm"
-    return formatter
-}()

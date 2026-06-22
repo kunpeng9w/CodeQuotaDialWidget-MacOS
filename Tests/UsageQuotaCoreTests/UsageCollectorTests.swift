@@ -358,8 +358,31 @@ private func utcCalendar() -> Calendar {
     #expect(snapshot.sources?.remoteStatus == .localOnly)
 }
 
+@Test func usageSnapshotStoreDecodesWholeAndFractionalISO8601Dates() throws {
+    let wholeSecond = try loadUsageSnapshot(generatedAt: "2026-06-21T07:26:37Z")
+    let fractionalSecond = try loadUsageSnapshot(generatedAt: "2026-06-21T07:26:37.123Z")
+
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    let expectedFractional = try #require(formatter.date(from: "2026-06-21T07:26:37.123Z"))
+
+    #expect(wholeSecond.generatedAt == ISO8601DateFormatter().date(from: "2026-06-21T07:26:37Z"))
+    #expect(fractionalSecond.generatedAt == expectedFractional)
+}
+
 private func dayStart(_ year: Int, _ month: Int, _ day: Int, calendar: Calendar) -> Date {
     calendar.date(from: DateComponents(year: year, month: month, day: day))!
+}
+
+private func loadUsageSnapshot(generatedAt: String) throws -> UsageSnapshot {
+    let directory = FileManager.default.temporaryDirectory
+        .appendingPathComponent("usage-snapshot-\(UUID().uuidString)", isDirectory: true)
+    let url = directory.appendingPathComponent("usage.json")
+    defer { try? FileManager.default.removeItem(at: directory) }
+
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    try Data(#"{ "generatedAt": "\#(generatedAt)" }"#.utf8).write(to: url)
+    return try UsageSnapshotStore(url: url).load()
 }
 
 @Test func pricingModeOnlineAndOfflineIgnoreMarker() {

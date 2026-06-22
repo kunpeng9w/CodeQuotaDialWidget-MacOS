@@ -57,7 +57,7 @@ struct UsagePanelView: View {
             .padding(Theme.contentPadding)
         }
         .navigationTitle("消耗统计")
-        .navigationSubtitle(snapshot.map { "更新于 \(usageTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
+        .navigationSubtitle(snapshot.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 RefreshButton(isRefreshing: isRefreshing) { await refresh() }
@@ -538,13 +538,6 @@ private func weekdayShort(_ period: String) -> String {
     let labels = ["日", "一", "二", "三", "四", "五", "六"]
     return labels[max(0, min(6, index - 1))]
 }
-
-private let usageTimeFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "zh_CN")
-    formatter.dateFormat = "HH:mm"
-    return formatter
-}()
 
 private let usageDayFormatter: DateFormatter = {
     let formatter = DateFormatter()

@@ -1,41 +1,33 @@
 import Foundation
+import QuotaProcessSupport
 
 public struct GLMQuotaSnapshotStore: Sendable {
     public static let fileName = "glm_quota_snapshot.json"
     public static let appGroupIdentifier = GLMQuotaAppGroup.identifier
 
-    public var url: URL
+    private var store: SnapshotStore<GLMQuotaSnapshot>
+
+    public var url: URL {
+        get { store.url }
+        set { store.url = newValue }
+    }
 
     public init(url: URL = GLMQuotaSnapshotStore.defaultURL()) {
-        self.url = url
+        store = SnapshotStore(url: url)
     }
 
     public static func defaultURL() -> URL {
-        if let appGroupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
-            return appGroupURL.appendingPathComponent(fileName)
-        }
-
-        return FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Group Containers", isDirectory: true)
-            .appendingPathComponent(appGroupIdentifier, isDirectory: true)
-            .appendingPathComponent(fileName)
+        SnapshotStore<GLMQuotaSnapshot>.defaultURL(
+            fileName: fileName,
+            appGroupIdentifier: appGroupIdentifier
+        )
     }
 
     public func load() throws -> GLMQuotaSnapshot {
-        let data = try Data(contentsOf: url)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(GLMQuotaSnapshot.self, from: data)
+        try store.load()
     }
 
     public func save(_ snapshot: GLMQuotaSnapshot) throws {
-        let directory = url.deletingLastPathComponent()
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let data = try encoder.encode(snapshot)
-        try data.write(to: url, options: .atomic)
+        try store.save(snapshot)
     }
 }

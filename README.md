@@ -92,7 +92,7 @@
 
 > 旧版本通过 `~/.glm_quota_config.json` 配置 GLM Key，现已**不再读取该文件**，请改用 app 内 GLM 页面填写（可删除旧文件）。
 >
-> 安全说明：API Key 以明文存于上述 JSON，"保密"指的是**界面不再回显**已保存的 Key，而非磁盘加密。
+> 安全说明：API Key 以明文存于上述 JSON（文件权限 `600`，仅当前用户可读），"保密"指的是**界面不再回显**已保存的 Key，而非磁盘加密。
 
 ## 本地配置
 
@@ -241,7 +241,7 @@ CodeQuotaDialWidget/
 
 ```text
 /Applications/CodeQuotaDialXcode.app
-~/Library/Application Support/CodeQuotaDial/runtime-config.json   # 代理 / 远端主机（可在 app 内「设置」修改）
+~/Library/Application Support/CodeQuotaDial/runtime-config.json   # 代理 / 远端主机 / GLM API Key（GLM Key 在 GLM 面板改，其余在「设置」改）
 ~/Library/LaunchAgents/local.codex-quota-dial.refresh.plist
 ~/Library/LaunchAgents/local.claude-quota-dial.refresh.plist
 ~/Library/LaunchAgents/local.glm-quota-dial.refresh.plist

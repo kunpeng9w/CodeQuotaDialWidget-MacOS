@@ -81,6 +81,10 @@ let package = Package(
         .target(
             name: "QuotaProcessSupport"
         ),
+        .testTarget(
+            name: "QuotaProcessSupportTests",
+            dependencies: ["QuotaProcessSupport"]
+        ),
         .target(
             name: "QuotaDialWidgetUI"
         ),
