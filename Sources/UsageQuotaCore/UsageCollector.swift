@@ -209,6 +209,7 @@ public struct UsageCollector: Sendable {
             total: overview.total,
             weekDays: overview.weekDays,
             breakdowns: overview.breakdowns,
+            calendarDays: overview.calendarDays,
             sources: UsageSources(
                 localReachable: localReachable,
                 remoteHosts: remoteHosts,
@@ -248,6 +249,7 @@ public struct UsageCollector: Sendable {
         var total: UsageSummary
         var weekDays: [UsageDay]
         var breakdowns: [UsageBreakdownSection]
+        var calendarDays: [UsageCalendarDay]
     }
 
     static func hostSnapshot(
@@ -324,8 +326,35 @@ public struct UsageCollector: Sendable {
                     .reduce(UsageSummary(), +)
                 return UsageDay(period: key, summary: summary)
             },
-            breakdowns: breakdowns
+            breakdowns: breakdowns,
+            calendarDays: mergeCalendarDays(snapshots.map(\.calendarDays))
         )
+    }
+
+    /// Merge per-day calendar rows from several snapshots (e.g. one agent
+    /// across hosts) into one set keyed by period, summing per-model usage.
+    private static func mergeCalendarDays(_ daySets: [[UsageCalendarDay]]) -> [UsageCalendarDay] {
+        var byPeriod: [String: (summary: UsageSummary, models: [String: UsageSummary])] = [:]
+        for days in daySets {
+            for day in days {
+                var entry = byPeriod[day.period] ?? (UsageSummary(), [:])
+                entry.summary = entry.summary + day.summary
+                for model in day.models {
+                    entry.models[model.name, default: UsageSummary()] = entry.models[model.name, default: UsageSummary()] + model.summary
+                }
+                byPeriod[day.period] = entry
+            }
+        }
+        return byPeriod.keys.sorted().map { period in
+            let entry = byPeriod[period]!
+            let models = entry.models
+                .map { UsageModelUsage(name: $0.key, summary: $0.value) }
+                .sorted { lhs, rhs in
+                    if lhs.summary.totalCost == rhs.summary.totalCost { return lhs.name < rhs.name }
+                    return lhs.summary.totalCost > rhs.summary.totalCost
+                }
+            return UsageCalendarDay(period: period, summary: entry.summary, models: models)
+        }
     }
 
     private static func mergeBreakdownItems(_ items: [UsageBreakdownItem]) -> [UsageBreakdownItem] {
@@ -490,7 +519,8 @@ public struct UsageCollector: Sendable {
             monthly: scope.monthly,
             total: scope.total,
             weekDays: scope.weekDays,
-            breakdowns: scope.breakdowns
+            breakdowns: scope.breakdowns,
+            calendarDays: scope.calendarDays
         )
     }
 
@@ -565,7 +595,8 @@ public struct UsageCollector: Sendable {
                 UsageBreakdownSection(id: "\(idPrefix)week-models", title: "本周模型", items: breakdownItems(weekRows)),
                 UsageBreakdownSection(id: "\(idPrefix)month-models", title: "本月模型", items: breakdownItems(monthRows)),
                 UsageBreakdownSection(id: "\(idPrefix)total-models", title: "总计模型", items: breakdownItems(rows))
-            ]
+            ],
+            calendarDays: calendarDays(from: rows)
         )
     }
 
@@ -599,6 +630,21 @@ public struct UsageCollector: Sendable {
                 if lhs.totalCost == rhs.totalCost { return lhs.name < rhs.name }
                 return lhs.totalCost > rhs.totalCost
             }
+    }
+
+    /// Build per-day calendar rows (with per-model detail) from merged daily
+    /// rows. Ascending by period.
+    private static func calendarDays(from rows: [DailyRow]) -> [UsageCalendarDay] {
+        rows.sorted { $0.period < $1.period }.map { row in
+            let models = row.models
+                .filter { $0.value.totalTokens > 0 || $0.value.totalCost > 0 }
+                .map { UsageModelUsage(name: $0.key, summary: $0.value) }
+                .sorted { lhs, rhs in
+                    if lhs.summary.totalCost == rhs.summary.totalCost { return lhs.name < rhs.name }
+                    return lhs.summary.totalCost > rhs.summary.totalCost
+                }
+            return UsageCalendarDay(period: row.period, summary: row.summary, models: models)
+        }
     }
 
     // MARK: - Parsing (pure)

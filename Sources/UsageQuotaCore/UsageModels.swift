@@ -9,6 +9,11 @@ public struct UsageSnapshot: Codable, Equatable, Sendable {
     public var total: UsageSummary
     public var weekDays: [UsageDay]
     public var breakdowns: [UsageBreakdownSection]
+    /// Per-day usage with per-model detail for the app's calendar heatmap and
+    /// day/range detail. Ascending by period.
+    /// Backward-compatible: old snapshots without this key decode to `[]`.
+    /// The widget ignores this.
+    public var calendarDays: [UsageCalendarDay]
     public var sources: UsageSources?
     public var hosts: [UsageHostSnapshot]
     public var agents: [UsageAgentSnapshot]
@@ -27,6 +32,7 @@ public struct UsageSnapshot: Codable, Equatable, Sendable {
         total: UsageSummary = UsageSummary(),
         weekDays: [UsageDay] = [],
         breakdowns: [UsageBreakdownSection] = [],
+        calendarDays: [UsageCalendarDay] = [],
         sources: UsageSources? = nil,
         hosts: [UsageHostSnapshot] = [],
         agents: [UsageAgentSnapshot] = [],
@@ -42,6 +48,7 @@ public struct UsageSnapshot: Codable, Equatable, Sendable {
         self.total = total
         self.weekDays = weekDays
         self.breakdowns = breakdowns
+        self.calendarDays = calendarDays
         self.sources = sources
         self.hosts = hosts
         self.agents = agents
@@ -61,6 +68,7 @@ extension UsageSnapshot {
         case total
         case weekDays
         case breakdowns
+        case calendarDays
         case sources
         case hosts
         case agents
@@ -79,6 +87,7 @@ extension UsageSnapshot {
         total = try container.decodeIfPresent(UsageSummary.self, forKey: .total) ?? UsageSummary()
         weekDays = try container.decodeIfPresent([UsageDay].self, forKey: .weekDays) ?? []
         breakdowns = try container.decodeIfPresent([UsageBreakdownSection].self, forKey: .breakdowns) ?? []
+        calendarDays = try container.decodeIfPresent([UsageCalendarDay].self, forKey: .calendarDays) ?? []
         sources = try container.decodeIfPresent(UsageSources.self, forKey: .sources)
         hosts = try container.decodeIfPresent([UsageHostSnapshot].self, forKey: .hosts) ?? []
         agents = try container.decodeIfPresent([UsageAgentSnapshot].self, forKey: .agents) ?? []
@@ -97,6 +106,7 @@ extension UsageSnapshot {
         try container.encode(total, forKey: .total)
         try container.encode(weekDays, forKey: .weekDays)
         try container.encode(breakdowns, forKey: .breakdowns)
+        try container.encode(calendarDays, forKey: .calendarDays)
         try container.encodeIfPresent(sources, forKey: .sources)
         try container.encode(hosts, forKey: .hosts)
         try container.encode(agents, forKey: .agents)
@@ -196,6 +206,10 @@ public struct UsageAgentSnapshot: Codable, Equatable, Sendable, Identifiable {
     public var total: UsageSummary
     public var weekDays: [UsageDay]
     public var breakdowns: [UsageBreakdownSection]
+    /// Per-day usage with per-model detail scoped to this agent/host/end.
+    /// Backward-compatible: old snapshots without this key decode to `[]`.
+    /// The widget ignores this.
+    public var calendarDays: [UsageCalendarDay]
 
     public init(
         id: String,
@@ -205,7 +219,8 @@ public struct UsageAgentSnapshot: Codable, Equatable, Sendable, Identifiable {
         monthly: UsageSummary = UsageSummary(),
         total: UsageSummary = UsageSummary(),
         weekDays: [UsageDay] = [],
-        breakdowns: [UsageBreakdownSection] = []
+        breakdowns: [UsageBreakdownSection] = [],
+        calendarDays: [UsageCalendarDay] = []
     ) {
         self.id = id
         self.name = name
@@ -215,6 +230,78 @@ public struct UsageAgentSnapshot: Codable, Equatable, Sendable, Identifiable {
         self.total = total
         self.weekDays = weekDays
         self.breakdowns = breakdowns
+        self.calendarDays = calendarDays
+    }
+}
+
+extension UsageAgentSnapshot {
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case daily
+        case weekly
+        case monthly
+        case total
+        case weekDays
+        case breakdowns
+        case calendarDays
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        daily = try container.decodeIfPresent(UsageSummary.self, forKey: .daily) ?? UsageSummary()
+        weekly = try container.decodeIfPresent(UsageSummary.self, forKey: .weekly) ?? UsageSummary()
+        monthly = try container.decodeIfPresent(UsageSummary.self, forKey: .monthly) ?? UsageSummary()
+        total = try container.decodeIfPresent(UsageSummary.self, forKey: .total) ?? UsageSummary()
+        weekDays = try container.decodeIfPresent([UsageDay].self, forKey: .weekDays) ?? []
+        breakdowns = try container.decodeIfPresent([UsageBreakdownSection].self, forKey: .breakdowns) ?? []
+        calendarDays = try container.decodeIfPresent([UsageCalendarDay].self, forKey: .calendarDays) ?? []
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(daily, forKey: .daily)
+        try container.encode(weekly, forKey: .weekly)
+        try container.encode(monthly, forKey: .monthly)
+        try container.encode(total, forKey: .total)
+        try container.encode(weekDays, forKey: .weekDays)
+        try container.encode(breakdowns, forKey: .breakdowns)
+        try container.encode(calendarDays, forKey: .calendarDays)
+    }
+}
+
+/// One model's token + cost usage for a single calendar day (or aggregated
+/// range). Used by the app's calendar heatmap and day/range detail card.
+public struct UsageModelUsage: Codable, Equatable, Sendable, Identifiable {
+    public var name: String
+    public var summary: UsageSummary
+
+    public var id: String { name }
+
+    public init(name: String, summary: UsageSummary = UsageSummary()) {
+        self.name = name
+        self.summary = summary
+    }
+}
+
+/// Per-day usage with per-model detail. Powers the calendar heatmap and the
+/// click-to-inspect / date-range detail in the app. `period` is a "YYYY-MM-DD"
+/// date key, ascending by period. The widget ignores this.
+public struct UsageCalendarDay: Codable, Equatable, Sendable, Identifiable {
+    public var period: String
+    public var summary: UsageSummary
+    public var models: [UsageModelUsage]
+
+    public var id: String { period }
+
+    public init(period: String, summary: UsageSummary = UsageSummary(), models: [UsageModelUsage] = []) {
+        self.period = period
+        self.summary = summary
+        self.models = models
     }
 }
 

@@ -210,6 +210,51 @@ private func utcCalendar() -> Calendar {
     #expect(scope.breakdowns.last?.items.map(\.name) == ["claude-opus", "gpt-5.4"])
 }
 
+@Test func scopeEmitsCalendarDaysWithPerModelDetail() {
+    let calendar = utcCalendar()
+    let now = ISO8601DateFormatter().date(from: "2026-06-21T12:00:00Z")! // Sunday
+    let rows = [
+        DailyRow(period: "2026-06-15", summary: UsageSummary(totalTokens: 35, totalCost: 1.2),
+                 agents: ["codex"], models: ["gpt-5.4": UsageSummary(totalTokens: 35, totalCost: 1.2)]),
+        DailyRow(period: "2026-06-21", summary: UsageSummary(totalTokens: 20, totalCost: 2.0),
+                 agents: ["claude"], models: ["claude-opus": UsageSummary(totalTokens: 20, totalCost: 2.0)]),
+        DailyRow(period: "2026-05-31", summary: UsageSummary(totalTokens: 100, totalCost: 9.9),
+                 agents: ["codex"], models: [:])
+    ]
+
+    let scope = UsageCollector.scope(rows: rows, now: now, calendar: calendar, idPrefix: "")
+    // Ascending by period, every row present.
+    #expect(scope.calendarDays.map(\.period) == ["2026-05-31", "2026-06-15", "2026-06-21"])
+    // Today's day carries its summary and per-model detail.
+    let today = scope.calendarDays.last { $0.period == "2026-06-21" }
+    #expect(today?.summary.totalCost == 2.0)
+    #expect(today?.models.map(\.name) == ["claude-opus"])
+    #expect(today?.models.first?.summary.totalTokens == 20)
+    // Day with no models (06-05-31) keeps an empty models list.
+    let empty = scope.calendarDays.first { $0.period == "2026-05-31" }
+    #expect(empty?.models.isEmpty == true)
+    #expect(empty?.summary.totalCost == 9.9)
+}
+
+@Test func calendarDaysKeepsAllAvailableDays() {
+    // Generate 70 days of rows with sortable unique periods; all available
+    // history should survive in calendarDays for the app's date-range detail.
+    let rows = (0..<70).map { offset in
+        DailyRow(
+            period: String(format: "%05d", offset),
+            summary: UsageSummary(totalTokens: 1, totalCost: Double(offset)),
+            agents: [], models: [:]
+        )
+    }
+    let calendar = utcCalendar()
+    let now = ISO8601DateFormatter().date(from: "2026-06-21T12:00:00Z")!
+    let scope = UsageCollector.scope(rows: rows, now: now, calendar: calendar, idPrefix: "")
+    #expect(scope.calendarDays.count == 70)
+    let periods = scope.calendarDays.map(\.period)
+    #expect(periods.first == "00000")
+    #expect(periods.last == "00069")
+}
+
 @Test func snapshotKeepsAgentsUnderTheirHosts() {
     let calendar = utcCalendar()
     let now = ISO8601DateFormatter().date(from: "2026-06-21T12:00:00Z")!
@@ -277,6 +322,10 @@ private func utcCalendar() -> Calendar {
     #expect(snapshot.agents.first?.breakdowns.map(\.id) == [
         "codex-today-models", "codex-week-models", "codex-month-models", "codex-total-models"
     ])
+    #expect(snapshot.calendarDays.first?.summary.totalCost == 110)
+    #expect(snapshot.calendarDays.first?.models.first?.summary.totalCost == 110)
+    #expect(snapshot.agents.first?.calendarDays.first?.summary.totalCost == 110)
+    #expect(snapshot.agents.first?.calendarDays.first?.models.first?.summary.totalCost == 110)
 }
 
 @Test func snapshotCanUseReachableRemoteWhenLocalFails() {
@@ -694,6 +743,34 @@ private func utcCalendar() -> Calendar {
     #expect(snapshot.sources?.remoteStatus == .localOnly)
     #expect(snapshot.sources?.localExtensions.isEmpty == true)
     #expect(snapshot.modelPrices.isEmpty == true)
+}
+
+@Test func decodesLegacySnapshotWithoutCalendarDays() throws {
+    let json = """
+    {
+      "generatedAt": "2026-06-21T07:26:37Z",
+      "agents": [
+        { "id": "agent:codex", "name": "codex" }
+      ],
+      "hosts": [
+        {
+          "id": "host:local",
+          "name": "本机",
+          "overview": { "id": "host:local:overview", "name": "总览" },
+          "agents": [
+            { "id": "host:local:agent:codex", "name": "codex" }
+          ]
+        }
+      ]
+    }
+    """
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    let snapshot = try decoder.decode(UsageSnapshot.self, from: Data(json.utf8))
+    #expect(snapshot.calendarDays.isEmpty)
+    #expect(snapshot.agents.first?.calendarDays.isEmpty == true)
+    #expect(snapshot.hosts.first?.overview.calendarDays.isEmpty == true)
+    #expect(snapshot.hosts.first?.agents.first?.calendarDays.isEmpty == true)
 }
 
 @Test func usageSnapshotStoreDecodesWholeAndFractionalISO8601Dates() throws {
