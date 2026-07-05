@@ -1120,10 +1120,11 @@ private struct ModelRow: View {
                     .font(.caption.weight(.medium))
                     .lineLimit(1)
                 Spacer()
-                Text("\(costText(item.totalCost)) · \(String(format: "%.1f", item.percent))%")
+                Text("\(costText(item.totalCost)) · \(String(format: "%.1f", item.percent))% · \(compactNumber(item.totalTokens)) tokens")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -1159,6 +1160,9 @@ private func costText(_ value: Double?) -> String {
 private func compactNumber(_ value: Int?) -> String {
     guard let value else { return "--" }
     let number = Double(value)
+    if number >= 1_000_000_000 {
+        return String(format: "%.1fB", number / 1_000_000_000)
+    }
     if number >= 1_000_000 {
         return String(format: "%.1fM", number / 1_000_000)
     }

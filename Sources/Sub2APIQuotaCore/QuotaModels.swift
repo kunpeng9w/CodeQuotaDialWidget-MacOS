@@ -148,6 +148,24 @@ public struct Sub2APIAccountReport: Codable, Equatable, Sendable, Identifiable {
         self.models = models
         self.error = error
     }
+
+    /// Sum of the relay's per-day rows that fall in the local natural month
+    /// containing `now`. This is separate from the relay's subscription
+    /// `monthly` limit window.
+    public func naturalMonthSummary(
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> Sub2APITokenSummary {
+        let target = calendar.dateComponents([.year, .month], from: now)
+        return days.reduce(Sub2APITokenSummary()) { partial, day in
+            guard let dayDate = sub2apiDayDate(day.period, calendar: calendar) else { return partial }
+            let components = calendar.dateComponents([.year, .month], from: dayDate)
+            guard components.year == target.year, components.month == target.month else {
+                return partial
+            }
+            return partial + day.summary
+        }
+    }
 }
 
 public struct Sub2APISnapshot: Codable, Equatable, Sendable {
@@ -214,4 +232,20 @@ public struct Sub2APISnapshot: Codable, Equatable, Sendable {
         guard let first = present.first else { return nil }
         return present.dropFirst().reduce(first, +)
     }
+}
+
+private func sub2apiDayDate(_ period: String, calendar: Calendar) -> Date? {
+    let parts = period.split(separator: "-")
+    guard parts.count == 3,
+          let year = Int(parts[0]),
+          let month = Int(parts[1]),
+          let day = Int(parts[2]) else {
+        return nil
+    }
+
+    var components = DateComponents()
+    components.year = year
+    components.month = month
+    components.day = day
+    return calendar.date(from: components)
 }

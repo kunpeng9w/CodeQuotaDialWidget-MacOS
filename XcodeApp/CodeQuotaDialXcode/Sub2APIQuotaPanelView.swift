@@ -4,10 +4,10 @@ import SwiftUI
 import WidgetKit
 
 /// Sub2API relay stats: multi-account (each with its own base URL + key +
-/// display name), an aggregate "总览" scope, the relay's daily/weekly/monthly
-/// spending limits, and usage cards modeled on the 消耗统计 panel. The primary
-/// money figure everywhere is `actual_cost`(实际扣费,与限额同口径); the
-/// upstream list price is shown as secondary text.
+/// display name), an aggregate "总览" scope, the relay's daily/weekly spending
+/// limits plus a local natural-month total, and usage cards modeled on the
+/// 消耗统计 panel. The primary money figure everywhere is `actual_cost`
+/// (实际扣费,与限额同口径); the upstream list price is shown as secondary text.
 struct Sub2APIQuotaPanelView: View {
     @State private var snapshot: Sub2APISnapshot?
     @State private var errorText: String?
@@ -59,10 +59,17 @@ struct Sub2APIQuotaPanelView: View {
                     HStack(spacing: Theme.cardSpacing) {
                         LimitStatCard(title: "日限额", window: report.daily)
                         LimitStatCard(title: "周限额", window: report.weekly)
-                        LimitStatCard(title: "月限额", window: report.monthly)
+                        NaturalMonthStatCard(summary: report.naturalMonthSummary())
                     }
 
-                    HStack(alignment: .top, spacing: Theme.cardSpacing) {
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.flexible(), spacing: Theme.cardSpacing, alignment: .top),
+                            GridItem(.flexible(), spacing: Theme.cardSpacing, alignment: .top)
+                        ],
+                        alignment: .leading,
+                        spacing: 0
+                    ) {
                         TodayCard(report: report)
                         TrendCard(days: report.days)
                     }
@@ -385,6 +392,59 @@ private struct LimitStatCard: View {
     }
 }
 
+private struct NaturalMonthStatCard: View {
+    let summary: Sub2APITokenSummary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("自然月总额")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(sub2apiCostText(summary.actualCost))
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                Text("标准 \(sub2apiCostText(summary.cost))")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
+
+            HStack(spacing: 8) {
+                NaturalMonthMetric(label: "请求", value: "\(summary.requests) 次")
+                NaturalMonthMetric(label: "Tokens", value: sub2apiCompactNumber(summary.totalTokens))
+            }
+
+            Text("按 daily_usage 汇总当前自然月")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        .cardSurface()
+    }
+}
+
+private struct NaturalMonthMetric: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 // MARK: - Today card
 
 private struct TodayCard: View {
@@ -429,6 +489,7 @@ private struct TodayCard: View {
             }
         }
         .cardSurface()
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
 
@@ -554,8 +615,12 @@ private struct TrendCard: View {
             }
         }
         .padding(Theme.cardPadding)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .strokeBorder(.quaternary, lineWidth: 1)
+        )
     }
 }
 

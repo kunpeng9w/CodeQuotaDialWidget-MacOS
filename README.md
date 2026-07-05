@@ -1,6 +1,6 @@
 # Code Quota Dial Widget
 
-> 将 **Codex**、**Claude Code**、**GLM（智谱）** 和 **Antigravity** 的额度做成 macOS 桌面组件，支持本地（含 ZCode CLI）、多端用量联合统计，随时一眼掌握用量。
+> 将 **Codex**、**Claude Code**、**GLM（智谱）**、**Antigravity** 和 **Sub2API** 的额度/统计做成 macOS 桌面组件，支持本地（含 ZCode CLI）、多端用量联合统计，随时一眼掌握用量。
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-macOS%2014%2B-blue" alt="platform" />
@@ -39,13 +39,14 @@
 ## 功能特性
 
 - 📊 在 macOS 桌面以表盘组件实时展示 Codex / Claude Code / GLM / Antigravity 额度。
+- 🌐 额外提供 **Sub2API 统计** 页面与桌面组件，支持配置多个中转站账号，汇总查看限额与用量概览。
 - 📈 额外提供 **消耗统计** 仪表盘组件，基于官方 `ccusage` 展示今日 / 本周 / 本月 / 总计的 token 与费用，支持多端（本机 + 远端 SSH）聚合；本机 **ZCode CLI** 的使用记录也会自动并入统计。
 - 💰 内置 **模型价格** 页面，可查看各模型的输入 / 缓存 / 输出单价明细与总花费，价格取自公共价格表并按日缓存（离线时回落到缓存或内置价）。
 - ⚙️ 完全零配置安装：签名身份 / Team ID / App Group 自动检测，无需手改 Swift、entitlements、`pbxproj` 或任何配置文件。
 - 🎛️ 代理与远端 SSH 主机在 app 的「设置」标签页里随时修改，保存即生效，**无需重新安装**。
 - 🔁 通过 `LaunchAgent` 定时抓取额度并自动刷新组件。
 - 🚀 一条命令完成构建、重签名、安装：`script/install.command`。
-- 🧩 五个组件相互独立，缺少某项凭据或本地服务时只影响对应组件，不影响其它。
+- 🧩 各组件相互独立，缺少某项凭据或本地服务时只影响对应组件，不影响其它。
 
 ## 适用范围
 
@@ -161,6 +162,7 @@ cd CodeQuotaDialWidget
 `/Applications/CodeQuotaDialXcode.app`（安装后会自动打开，也可从启动台/聚焦搜索打开）。左侧边栏切换页面：
 
 - **Codex / Claude / GLM / Antigravity**：各自的额度页，展示剩余百分比、重置时间等额度卡片。
+- **Sub2API**：中转站统计页，可配置多个账号，查看账号/总览视角下的限额、当日消耗、趋势和模型明细。
 - **消耗统计**：基于 `ccusage` 的今日 / 本周 / 本月 / 总计 token 与费用、本周趋势、模型分布；本机 **ZCode CLI** 的使用记录会自动并入统计，无需额外配置。
 - **模型价格**：展示各模型的输入 / 缓存 / 输出单价明细与总花费，相当于消耗统计背后费用折算的价格明细表。
 - **设置**：代理与远端 SSH 主机。
@@ -170,6 +172,7 @@ cd CodeQuotaDialWidget
 ### 2. 首次需要做的配置（都在 app 内，无需重装）
 
 - **GLM**：进 **GLM 页面**，在「API Key」卡片粘贴你的 GLM API Key 后保存（粘贴时可见，保存后隐藏）。
+- **Sub2API**：进 **Sub2API 页面**，添加中转站的 Base URL 和 API Key；支持配置多个账号并在页内直接修改或删除。
 - **代理**：默认留空即可自动跟随 macOS 系统代理；如果你想覆盖系统代理，再进 **设置** 页手填 `http://127.0.0.1:端口`，保存后回各页点刷新即可生效。
 - **远端多端统计**（可选）：进 **设置** 页，在「远端 SSH 主机」每行填一个 host（需免密 SSH 且远端自带 `ccusage`）。
 - **ZCode 用量**（可选）：默认开启，会自动读取本机 ZCode CLI 的使用记录并并入「消耗统计」，无需任何配置；若你不使用，可在 **设置** 页关闭「ZCode 用量扩展」。
@@ -184,7 +187,7 @@ cd CodeQuotaDialWidget
 
 ```text
 LaunchAgent
-  -> CodexQuotaSnapshotTool / ClaudeQuotaSnapshotTool / GLMQuotaSnapshotTool / AntigravityQuotaSnapshotTool / UsageQuotaSnapshotTool
+  -> CodexQuotaSnapshotTool / ClaudeQuotaSnapshotTool / GLMQuotaSnapshotTool / AntigravityQuotaSnapshotTool / Sub2APIQuotaSnapshotTool / UsageQuotaSnapshotTool
   -> 写入 App Group 共享容器中的 JSON 快照
   -> Widget 读取快照并刷新
 ```

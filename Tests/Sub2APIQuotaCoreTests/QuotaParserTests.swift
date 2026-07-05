@@ -97,3 +97,34 @@ private let sampleJSON = """
     let decoded = try JSONDecoder().decode(Sub2APISnapshot.self, from: data)
     #expect(decoded == snapshot)
 }
+
+@Test func naturalMonthSummaryUsesCurrentCalendarMonth() {
+    let report = Sub2APIAccountReport(
+        id: "a",
+        name: "A",
+        days: [
+            Sub2APIDayUsage(
+                period: "2026-07-01",
+                summary: Sub2APITokenSummary(requests: 2, totalTokens: 100, cost: 2, actualCost: 1)
+            ),
+            Sub2APIDayUsage(
+                period: "2026-07-15",
+                summary: Sub2APITokenSummary(requests: 3, totalTokens: 250, cost: 4, actualCost: 2)
+            ),
+            Sub2APIDayUsage(
+                period: "2026-06-30",
+                summary: Sub2APITokenSummary(requests: 9, totalTokens: 999, cost: 9, actualCost: 9)
+            )
+        ]
+    )
+
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+    let now = calendar.date(from: DateComponents(year: 2026, month: 7, day: 20))!
+
+    let summary = report.naturalMonthSummary(now: now, calendar: calendar)
+    #expect(summary.requests == 5)
+    #expect(summary.totalTokens == 350)
+    #expect(summary.cost == 6)
+    #expect(summary.actualCost == 3)
+}

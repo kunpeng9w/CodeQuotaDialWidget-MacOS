@@ -159,7 +159,7 @@ public struct ClaudeQuotaCollector: Sendable {
 
     /// Cooldown between CLI refresh attempts. Caps wasted `claude` spawns when refresh
     /// can never succeed (e.g. a revoked refreshToken) without delaying normal ~8h expiry.
-    private static let refreshCooldown: TimeInterval = 30 * 60
+    private static let refreshCooldown: TimeInterval = 5 * 60
 
     /// Triggers a one-shot `claude -p` to refresh the keychain OAuth token.
     /// Returns true only if `claude` was found and exited cleanly; the real proof of

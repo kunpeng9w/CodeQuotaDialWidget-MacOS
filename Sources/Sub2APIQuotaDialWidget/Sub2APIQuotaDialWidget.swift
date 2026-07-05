@@ -57,7 +57,7 @@ public struct Sub2APIQuotaDialWidget: Widget {
             Sub2APIQuotaWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("Sub2API 统计")
-        .description("显示 Sub2API 中转站的今日消耗与日/周/月限额。")
+        .description("显示 Sub2API 中转站的今日/本周限额与自然月总额。")
         .supportedFamilies([.systemMedium, .systemLarge])
     }
 }
@@ -84,21 +84,14 @@ private struct MediumSub2APIDashboard: View {
         VStack(alignment: .leading, spacing: 8) {
             Sub2APIWidgetHeader(snapshot: snapshot, overview: overview)
 
-            HStack(alignment: .top, spacing: 12) {
-                TodayCostColumn(overview: overview, costFontSize: 26)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                VStack(spacing: 5) {
-                    LimitMiniRow(title: "日", window: overview.daily)
-                    LimitMiniRow(title: "周", window: overview.weekly)
-                    LimitMiniRow(title: "月", window: overview.monthly)
-                }
-                .frame(width: 132)
+            HStack(spacing: 8) {
+                CompactLimitTile(title: "日限额", window: overview.daily, tint: .cyan)
+                CompactLimitTile(title: "周限额", window: overview.weekly, tint: .indigo)
+                NaturalMonthTile(summary: overview.naturalMonthSummary(), tint: .purple)
             }
-
-            Sub2APIWeekTrend(days: overview.days, height: 30)
         }
         .padding(.top, 2)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .containerBackground(.fill.tertiary, for: .widget)
     }
 }
@@ -122,7 +115,7 @@ private struct LargeSub2APIDashboard: View {
                 VStack(spacing: 6) {
                     LimitMiniRow(title: "日", window: overview.daily)
                     LimitMiniRow(title: "周", window: overview.weekly)
-                    LimitMiniRow(title: "月", window: overview.monthly)
+                    NaturalMonthMiniRow(title: "自然月", summary: overview.naturalMonthSummary())
                 }
                 .frame(width: 146)
             }
@@ -131,7 +124,7 @@ private struct LargeSub2APIDashboard: View {
                 Text("近 7 天趋势")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
-                Sub2APIWeekTrend(days: overview.days, height: 44, showsLabels: true)
+                Sub2APIWeekTrend(days: overview.days, height: 44, showsLabels: true, expands: true)
             }
 
             HStack(alignment: .top, spacing: 14) {
@@ -140,6 +133,7 @@ private struct LargeSub2APIDashboard: View {
             }
         }
         .padding(.top, 2)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .containerBackground(.fill.tertiary, for: .widget)
     }
 }
@@ -235,6 +229,110 @@ private struct LimitMiniRow: View {
     }
 }
 
+private struct NaturalMonthMiniRow: View {
+    var title: String
+    var summary: Sub2APITokenSummary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                Text(costText(summary.actualCost))
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+            }
+            Text("标准 \(costText(summary.cost)) · \(compactNumber(summary.totalTokens)) tokens")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Color.secondary.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+private struct CompactLimitTile: View {
+    var title: String
+    var window: Sub2APILimitWindow?
+    var tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+
+            Text(window.map { "\($0.remainingPercent)%" } ?? "--")
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(window.map(limitTone) ?? .secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.secondary.opacity(0.15))
+                    if let window {
+                        Capsule()
+                            .fill(tint.opacity(0.8))
+                            .frame(width: geo.size.width * min(1, Double(window.usedPercent) / 100))
+                    }
+                }
+            }
+            .frame(height: 5)
+
+            Text(window.map { "已用 \(costText($0.usageUSD)) / \(limitText($0.limitUSD))" } ?? "暂无限额")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.72)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color.secondary.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+private struct NaturalMonthTile: View {
+    var summary: Sub2APITokenSummary
+    var tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("自然月")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+
+            Text(costText(summary.actualCost))
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            Text("标准 \(costText(summary.cost))")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+
+            Text("\(compactNumber(summary.totalTokens)) tokens")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.72)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
+    }
+}
+
 private struct DailyTokenValues: View {
     var summary: Sub2APITokenSummary
 
@@ -273,6 +371,9 @@ private struct Sub2APIWeekTrend: View {
     var days: [Sub2APIDayUsage]
     var height: CGFloat = 44
     var showsLabels: Bool = false
+    /// Expanding bars soak up the widget's leftover vertical space so short
+    /// content doesn't get centered with big top/bottom margins.
+    var expands: Bool = false
 
     /// The trailing 7 local days, zero-filled where the report has no row.
     private var weekDays: [Sub2APIDayUsage] {
@@ -306,7 +407,7 @@ private struct Sub2APIWeekTrend: View {
                                 }
                         }
                     }
-                    .frame(height: height)
+                    .frame(minHeight: height, maxHeight: expands ? .infinity : height)
 
                     if showsLabels {
                         Text(weekdayShort(day.period))
