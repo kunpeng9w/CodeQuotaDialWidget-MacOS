@@ -98,18 +98,13 @@ struct UsagePanelView: View {
         }
     }
 
+    /// Always side by side: the window's minimum width (ContentView) is set so
+    /// this row can never fall below its break point, so no stacked fallback.
     private func calendarDetailSection(days: [UsageCalendarDay]) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: Theme.cardSpacing) {
-                usageHeatmap(days: days)
-                usageDetailCard(days: days)
-                    .frame(minWidth: 390, maxWidth: .infinity, alignment: .topLeading)
-            }
-
-            VStack(alignment: .leading, spacing: Theme.cardSpacing) {
-                usageHeatmap(days: days)
-                usageDetailCard(days: days)
-            }
+        HStack(alignment: .top, spacing: Theme.cardSpacing) {
+            usageHeatmap(days: days)
+            usageDetailCard(days: days)
+                .frame(minWidth: 390, maxWidth: .infinity, alignment: .topLeading)
         }
     }
 

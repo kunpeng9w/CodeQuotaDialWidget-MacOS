@@ -16,6 +16,10 @@ struct ContentView: View {
                         alignment: .topLeading
                     )
             }
+            // Window floor: wide enough that the usage panel's calendar +
+            // detail-card row always fits side by side (244 + 12 + 390 plus
+            // 24pt content padding each side), so no panel ever reflows.
+            .frame(minWidth: 700)
         }
         .navigationSplitViewStyle(.balanced)
     }
