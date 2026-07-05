@@ -8,7 +8,6 @@ struct SettingsPanelView: View {
     @State private var proxyURL = ""
     @State private var remoteHostsText = ""
     @State private var zcodeUsageEnabled = true
-    @State private var sub2apiUsageEnabled = true
     @State private var savedConfig = RuntimeConfig.empty
     @State private var statusText: String?
     @State private var isError = false
@@ -19,7 +18,6 @@ struct SettingsPanelView: View {
                 proxyCard
                 remoteCard
                 zcodeCard
-                sub2apiCard
 
                 HStack(spacing: 10) {
                     Button("保存") { save() }
@@ -96,20 +94,6 @@ struct SettingsPanelView: View {
         .cardSurface()
     }
 
-    private var sub2apiCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Toggle(isOn: $sub2apiUsageEnabled) {
-                Label("Sub2API 用量扩展", systemImage: "arrow.triangle.2.circlepath.circle")
-                    .font(.callout.weight(.semibold))
-            }
-            Text("开启后把 Sub2API 页面配置的账号用量按标准价（cost）合并到“消耗”统计；账号在 Sub2API 页面管理。")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .cardSurface()
-    }
-
     private var editedConfig: RuntimeConfig {
         // glmApiKey and the sub2api accounts are owned by their panels; carry
         // the saved values through untouched so saving here never wipes them.
@@ -118,8 +102,7 @@ struct SettingsPanelView: View {
             remoteHosts: parseHosts(remoteHostsText),
             glmApiKey: savedConfig.glmApiKey,
             zcodeUsageEnabled: zcodeUsageEnabled,
-            sub2apiAccounts: savedConfig.sub2apiAccounts,
-            sub2apiUsageEnabled: sub2apiUsageEnabled
+            sub2apiAccounts: savedConfig.sub2apiAccounts
         )
     }
 
@@ -131,7 +114,6 @@ struct SettingsPanelView: View {
         proxyURL = config.proxyURL
         remoteHostsText = config.remoteHosts.joined(separator: "\n")
         zcodeUsageEnabled = config.zcodeUsageEnabled
-        sub2apiUsageEnabled = config.sub2apiUsageEnabled
         statusText = nil
         isError = false
     }
@@ -145,7 +127,6 @@ struct SettingsPanelView: View {
             proxyURL = config.proxyURL
             remoteHostsText = config.remoteHosts.joined(separator: "\n")
             zcodeUsageEnabled = config.zcodeUsageEnabled
-            sub2apiUsageEnabled = config.sub2apiUsageEnabled
             statusText = "已保存"
             isError = false
         } catch {

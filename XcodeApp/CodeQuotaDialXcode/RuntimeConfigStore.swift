@@ -14,15 +14,13 @@ struct RuntimeConfig: Equatable {
     var glmApiKey: String
     var zcodeUsageEnabled: Bool
     var sub2apiAccounts: [Sub2APIAccountEntry]
-    var sub2apiUsageEnabled: Bool
 
     static let empty = RuntimeConfig(
         proxyURL: "",
         remoteHosts: [],
         glmApiKey: "",
         zcodeUsageEnabled: true,
-        sub2apiAccounts: [],
-        sub2apiUsageEnabled: true
+        sub2apiAccounts: []
     )
 }
 
@@ -66,14 +64,12 @@ enum RuntimeConfigStore {
                 apiKey: apiKey
             )
         }
-        let sub2apiUsageEnabled = (object["sub2apiUsageEnabled"] as? Bool) ?? true
         return RuntimeConfig(
             proxyURL: proxy,
             remoteHosts: hosts,
             glmApiKey: glmApiKey,
             zcodeUsageEnabled: zcodeUsageEnabled,
-            sub2apiAccounts: sub2apiAccounts,
-            sub2apiUsageEnabled: sub2apiUsageEnabled
+            sub2apiAccounts: sub2apiAccounts
         )
     }
 
@@ -92,8 +88,7 @@ enum RuntimeConfigStore {
                     "baseURL": account.baseURL.trimmingCharacters(in: .whitespacesAndNewlines),
                     "apiKey": account.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
                 ]
-            },
-            "sub2apiUsageEnabled": config.sub2apiUsageEnabled
+            }
         ]
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),

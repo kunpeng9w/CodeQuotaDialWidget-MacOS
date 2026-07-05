@@ -192,7 +192,7 @@ let package = Package(
         ),
         .target(
             name: "UsageQuotaCore",
-            dependencies: ["QuotaProcessSupport", "Sub2APIQuotaCore"]
+            dependencies: ["QuotaProcessSupport"]
         ),
         .target(
             name: "UsagePanelSupport",
