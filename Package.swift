@@ -65,6 +65,18 @@ let package = Package(
             targets: ["AntigravityQuotaSnapshotTool"]
         ),
         .library(
+            name: "Sub2APIQuotaCore",
+            targets: ["Sub2APIQuotaCore"]
+        ),
+        .library(
+            name: "Sub2APIQuotaDialWidget",
+            targets: ["Sub2APIQuotaDialWidget"]
+        ),
+        .executable(
+            name: "Sub2APIQuotaSnapshotTool",
+            targets: ["Sub2APIQuotaSnapshotTool"]
+        ),
+        .library(
             name: "UsageQuotaCore",
             targets: ["UsageQuotaCore"]
         ),
@@ -163,8 +175,24 @@ let package = Package(
             dependencies: ["AntigravityQuotaCore"]
         ),
         .target(
-            name: "UsageQuotaCore",
+            name: "Sub2APIQuotaCore",
             dependencies: ["QuotaProcessSupport"]
+        ),
+        .target(
+            name: "Sub2APIQuotaDialWidget",
+            dependencies: ["Sub2APIQuotaCore"]
+        ),
+        .executableTarget(
+            name: "Sub2APIQuotaSnapshotTool",
+            dependencies: ["Sub2APIQuotaCore"]
+        ),
+        .testTarget(
+            name: "Sub2APIQuotaCoreTests",
+            dependencies: ["Sub2APIQuotaCore"]
+        ),
+        .target(
+            name: "UsageQuotaCore",
+            dependencies: ["QuotaProcessSupport", "Sub2APIQuotaCore"]
         ),
         .target(
             name: "UsagePanelSupport",

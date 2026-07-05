@@ -30,6 +30,7 @@ public struct UsageCollector: Sendable {
         let hosts = UsageRemoteConfig.remoteHosts
         let remoteEndpoints = hosts.map { Endpoint.remote($0) }
         let zcodeTask = Self.startZCodeCollection(now: now, calendar: calendar, mode: mode)
+        let sub2apiTask = Self.startSub2APICollection(now: now)
         let litellmTask = Self.startLiteLLMCatalog(now: now, calendar: calendar, mode: mode)
 
         // Wave 1: combined `daily --json` on local + every configured remote,
@@ -85,15 +86,20 @@ public struct UsageCollector: Sendable {
         }
 
         let zcodeResult = zcodeTask.wait()
+        let sub2apiRows = sub2apiTask.wait().rows
         let zcodeRows = zcodeResult.rows
-        let localExtensions = zcodeRows.isEmpty ? [] : [ZCodeUsageCollector.agentName]
-        if !zcodeRows.isEmpty {
+        var localExtensions: [String] = []
+        for (agent, rows) in [
+            (ZCodeUsageCollector.agentName, zcodeRows),
+            (Sub2APIUsageExtension.agentName, sub2apiRows)
+        ] where !rows.isEmpty {
+            localExtensions.append(agent)
             if let localIndex = hostRows.firstIndex(where: { $0.id == "host:local" }) {
-                hostRows[localIndex].rows = Self.mergeRows([hostRows[localIndex].rows, zcodeRows])
+                hostRows[localIndex].rows = Self.mergeRows([hostRows[localIndex].rows, rows])
             } else {
-                hostRows.insert(HostRows(id: "host:local", name: "本机", rows: zcodeRows), at: 0)
+                hostRows.insert(HostRows(id: "host:local", name: "本机", rows: rows), at: 0)
             }
-            agentRowsByHostID["host:local", default: [:]][ZCodeUsageCollector.agentName] = zcodeRows
+            agentRowsByHostID["host:local", default: [:]][agent] = rows
         }
 
         guard !hostRows.isEmpty else {
@@ -152,6 +158,19 @@ public struct UsageCollector: Sendable {
             group.leave()
         }
         return ZCodeTask(group: group, result: result)
+    }
+
+    private static func startSub2APICollection(now: Date) -> Sub2APITask {
+        let result = Box<Sub2APIUsageExtension.Result?>(nil)
+        let group = DispatchGroup()
+        let queue = DispatchQueue(label: "usage.sub2api.collect", qos: .utility)
+        group.enter()
+        queue.async {
+            let collected = Sub2APIUsageExtension().collect(now: now)
+            result.withLock { $0 = collected }
+            group.leave()
+        }
+        return Sub2APITask(group: group, result: result)
     }
 
     private static func startLiteLLMCatalog(now: Date, calendar: Calendar, mode: PricingMode) -> CatalogTask {
@@ -807,6 +826,17 @@ struct ZCodeTask {
         guard let group, let result else { return ZCodeUsageCollector.Result() }
         group.wait()
         return result.value ?? ZCodeUsageCollector.Result()
+    }
+}
+
+struct Sub2APITask {
+    var group: DispatchGroup?
+    var result: Box<Sub2APIUsageExtension.Result?>?
+
+    func wait() -> Sub2APIUsageExtension.Result {
+        guard let group, let result else { return Sub2APIUsageExtension.Result() }
+        group.wait()
+        return result.value ?? Sub2APIUsageExtension.Result()
     }
 }
 

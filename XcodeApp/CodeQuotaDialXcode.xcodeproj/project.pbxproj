@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5AB2A0012FCFDAC800DCDC5F /* Sub2APIQuotaDialWidget in Frameworks */ = {isa = PBXBuildFile; productRef = 5AB2A1022FCFDAC800DCDC5F /* Sub2APIQuotaDialWidget */; };
+		5AB2A0022FCFDAC800DCDC5F /* Sub2APIQuotaCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5AB2A1012FCFDAC800DCDC5F /* Sub2APIQuotaCore */; };
 		C1A0DE012FCFDAC800DCDC5F /* ClaudeQuotaDialWidget in Frameworks */ = {isa = PBXBuildFile; productRef = C1A0DE122FCFDAC800DCDC5F /* ClaudeQuotaDialWidget */; };
 		C1A0DE022FCFDAC800DCDC5F /* ClaudeQuotaCore in Frameworks */ = {isa = PBXBuildFile; productRef = C1A0DE112FCFDAC800DCDC5F /* ClaudeQuotaCore */; };
 		C0DE00012FCFDAC800DCDC5F /* GLMQuotaDialWidget in Frameworks */ = {isa = PBXBuildFile; productRef = C0DE10022FCFDAC800DCDC5F /* GLMQuotaDialWidget */; };
@@ -88,6 +90,7 @@
 			files = (
 				C1A0DE022FCFDAC800DCDC5F /* ClaudeQuotaCore in Frameworks */,
 				C0DE00022FCFDAC800DCDC5F /* GLMQuotaCore in Frameworks */,
+					5AB2A0022FCFDAC800DCDC5F /* Sub2APIQuotaCore in Frameworks */,
 					AC0DE0022FCFDAC800DCDC5F /* AntigravityQuotaCore in Frameworks */,
 					55A6E0022FCFDAC800DCDC5F /* UsageQuotaCore in Frameworks */,
 					515550524F43303200000001 /* QuotaProcessSupport in Frameworks */,
@@ -102,6 +105,7 @@
 				C1A0DE012FCFDAC800DCDC5F /* ClaudeQuotaDialWidget in Frameworks */,
 				C0DE00012FCFDAC800DCDC5F /* GLMQuotaDialWidget in Frameworks */,
 				AC0DE0012FCFDAC800DCDC5F /* AntigravityQuotaDialWidget in Frameworks */,
+				5AB2A0012FCFDAC800DCDC5F /* Sub2APIQuotaDialWidget in Frameworks */,
 				55A6E0012FCFDAC800DCDC5F /* UsageQuotaDialWidget in Frameworks */,
 				731C19542FCFDAC800DCDC5F /* CodexQuotaDialWidget in Frameworks */,
 				733BD9402FCFD469004980CA /* SwiftUI.framework in Frameworks */,
@@ -167,6 +171,7 @@
 				C1A0DE112FCFDAC800DCDC5F /* ClaudeQuotaCore */,
 					C0DE10012FCFDAC800DCDC5F /* GLMQuotaCore */,
 					AC0DE1012FCFDAC800DCDC5F /* AntigravityQuotaCore */,
+					5AB2A1012FCFDAC800DCDC5F /* Sub2APIQuotaCore */,
 					55A6E1012FCFDAC800DCDC5F /* UsageQuotaCore */,
 					515550524F43303100000001 /* QuotaProcessSupport */,
 				);
@@ -195,6 +200,7 @@
 				C1A0DE122FCFDAC800DCDC5F /* ClaudeQuotaDialWidget */,
 				C0DE10022FCFDAC800DCDC5F /* GLMQuotaDialWidget */,
 				AC0DE1022FCFDAC800DCDC5F /* AntigravityQuotaDialWidget */,
+				5AB2A1022FCFDAC800DCDC5F /* Sub2APIQuotaDialWidget */,
 				55A6E1022FCFDAC800DCDC5F /* UsageQuotaDialWidget */,
 			);
 			productName = CodeQuotaDialWidgetExtension;
@@ -634,6 +640,14 @@
 		AC0DE1022FCFDAC800DCDC5F /* AntigravityQuotaDialWidget */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AntigravityQuotaDialWidget;
+		};
+		5AB2A1012FCFDAC800DCDC5F /* Sub2APIQuotaCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Sub2APIQuotaCore;
+		};
+		5AB2A1022FCFDAC800DCDC5F /* Sub2APIQuotaDialWidget */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Sub2APIQuotaDialWidget;
 		};
 		55A6E1012FCFDAC800DCDC5F /* UsageQuotaCore */ = {
 			isa = XCSwiftPackageProductDependency;

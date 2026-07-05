@@ -150,6 +150,8 @@ enum LaunchAgentLabels {
                       plist: "~/Library/LaunchAgents/local.glm-quota-dial.refresh.plist")
     static let antigravity = (label: "local.antigravity-quota-dial.refresh",
                               plist: "~/Library/LaunchAgents/local.antigravity-quota-dial.refresh.plist")
+    static let sub2api = (label: "local.sub2api-quota-dial.refresh",
+                          plist: "~/Library/LaunchAgents/local.sub2api-quota-dial.refresh.plist")
     static let usage = (label: "local.usage-quota-dial.refresh",
                         plist: "~/Library/LaunchAgents/local.usage-quota-dial.refresh.plist")
 }

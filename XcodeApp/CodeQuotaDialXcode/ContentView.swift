@@ -72,6 +72,7 @@ struct ContentView: View {
         case .claude:      ClaudeQuotaPanelView()
         case .glm:         GLMQuotaPanelView()
         case .antigravity: AntigravityQuotaPanelView()
+        case .sub2api:     Sub2APIQuotaPanelView()
         case .usage:       UsagePanelView()
         case .modelPrices: ModelPricesPanelView()
         case .settings:    SettingsPanelView()
@@ -105,13 +106,14 @@ enum DashboardSection: String, CaseIterable, Identifiable {
     case claude
     case glm
     case antigravity
+    case sub2api
     case usage
     case modelPrices
     case settings
 
     var id: String { rawValue }
 
-    static let quotaCases: [DashboardSection] = [.codex, .claude, .glm, .antigravity]
+    static let quotaCases: [DashboardSection] = [.codex, .claude, .glm, .antigravity, .sub2api]
 
     var title: String {
         switch self {
@@ -119,6 +121,7 @@ enum DashboardSection: String, CaseIterable, Identifiable {
         case .claude:      return "Claude"
         case .glm:         return "GLM"
         case .antigravity: return "Antigravity"
+        case .sub2api:     return "Sub2API"
         case .usage:       return "消耗统计"
         case .modelPrices: return "模型价格"
         case .settings:    return "设置"
@@ -129,7 +132,7 @@ enum DashboardSection: String, CaseIterable, Identifiable {
     /// SF Symbol. The PNGs live in Assets.xcassets keyed by the case rawValue.
     var iconAsset: String? {
         switch self {
-        case .codex, .claude, .glm, .antigravity: return rawValue
+        case .codex, .claude, .glm, .antigravity, .sub2api: return rawValue
         case .usage, .modelPrices, .settings: return nil
         }
     }
@@ -141,6 +144,7 @@ enum DashboardSection: String, CaseIterable, Identifiable {
         case .claude:      return "sparkles"
         case .glm:         return "cube"
         case .antigravity: return "bolt.fill"
+        case .sub2api:     return "arrow.triangle.2.circlepath.circle"
         case .usage:       return "chart.bar.xaxis"
         case .modelPrices: return "tag"
         case .settings:    return "gearshape"
@@ -153,6 +157,7 @@ enum DashboardSection: String, CaseIterable, Identifiable {
         case .claude:      return .orange
         case .glm:         return .blue
         case .antigravity: return .purple
+        case .sub2api:     return .indigo
         case .usage:       return .green
         case .modelPrices: return .mint
         case .settings:    return .gray

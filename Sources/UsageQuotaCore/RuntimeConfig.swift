@@ -46,6 +46,16 @@ public enum UsageZCodeConfig {
     }
 }
 
+public enum UsageSub2APIConfig {
+    /// Whether sub2api usage (at standard list price) is merged into the usage
+    /// stats. Missing config defaults to enabled so configured accounts appear
+    /// automatically; the accounts themselves come from `Sub2APIQuotaConfig`.
+    public static var enabled: Bool {
+        guard let value = QuotaRuntimeConfigFile.object()["sub2apiUsageEnabled"] as? Bool else { return true }
+        return value
+    }
+}
+
 public enum UsageProxyConfig {
     /// Manual proxy override passed to curl for optional online model pricing
     /// refresh. `nil`/empty means the caller falls back to the current macOS

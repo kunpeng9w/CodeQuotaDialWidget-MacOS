@@ -3,6 +3,7 @@ import ClaudeQuotaCore
 import CodexQuotaCore
 import Foundation
 import GLMQuotaCore
+import Sub2APIQuotaCore
 import WidgetKit
 
 protocol QuotaPanelRefreshSnapshot: Sendable {
@@ -74,8 +75,10 @@ extension CodexQuotaSnapshot: QuotaPanelRefreshSnapshot {}
 extension ClaudeQuotaSnapshot: QuotaPanelRefreshSnapshot {}
 extension GLMQuotaSnapshot: QuotaPanelRefreshSnapshot {}
 extension AntigravityQuotaSnapshot: QuotaPanelRefreshSnapshot {}
+extension Sub2APISnapshot: QuotaPanelRefreshSnapshot {}
 
 extension CodexQuotaSnapshotStore: QuotaPanelSnapshotStoring {}
 extension ClaudeQuotaSnapshotStore: QuotaPanelSnapshotStoring {}
 extension GLMQuotaSnapshotStore: QuotaPanelSnapshotStoring {}
 extension AntigravityQuotaSnapshotStore: QuotaPanelSnapshotStoring {}
+extension Sub2APIQuotaSnapshotStore: QuotaPanelSnapshotStoring {}

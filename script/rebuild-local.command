@@ -16,11 +16,13 @@ CODEX_RUNTIME_DIR="$RUNTIME_DIR/codex"
 CLAUDE_RUNTIME_DIR="$RUNTIME_DIR/claude"
 GLM_RUNTIME_DIR="$RUNTIME_DIR/glm"
 ANTIGRAVITY_RUNTIME_DIR="$RUNTIME_DIR/antigravity"
+SUB2API_RUNTIME_DIR="$RUNTIME_DIR/sub2api"
 USAGE_RUNTIME_DIR="$RUNTIME_DIR/usage"
 CODEX_TOOL_RUNTIME="$CODEX_RUNTIME_DIR/CodexQuotaSnapshotTool"
 CLAUDE_TOOL_RUNTIME="$CLAUDE_RUNTIME_DIR/ClaudeQuotaSnapshotTool"
 GLM_TOOL_RUNTIME="$GLM_RUNTIME_DIR/GLMQuotaSnapshotTool"
 ANTIGRAVITY_TOOL_RUNTIME="$ANTIGRAVITY_RUNTIME_DIR/AntigravityQuotaSnapshotTool"
+SUB2API_TOOL_RUNTIME="$SUB2API_RUNTIME_DIR/Sub2APIQuotaSnapshotTool"
 USAGE_TOOL_RUNTIME="$USAGE_RUNTIME_DIR/UsageQuotaSnapshotTool"
 LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
 RUNTIME_CONFIG_FILE="$HOME/Library/Application Support/CodeQuotaDial/runtime-config.json"
@@ -28,11 +30,13 @@ CODEX_LABEL="local.codex-quota-dial.refresh"
 CLAUDE_LABEL="local.claude-quota-dial.refresh"
 GLM_LABEL="local.glm-quota-dial.refresh"
 ANTIGRAVITY_LABEL="local.antigravity-quota-dial.refresh"
+SUB2API_LABEL="local.sub2api-quota-dial.refresh"
 USAGE_LABEL="local.usage-quota-dial.refresh"
 CODEX_PLIST="$LAUNCH_AGENTS_DIR/$CODEX_LABEL.plist"
 CLAUDE_PLIST="$LAUNCH_AGENTS_DIR/$CLAUDE_LABEL.plist"
 GLM_PLIST="$LAUNCH_AGENTS_DIR/$GLM_LABEL.plist"
 ANTIGRAVITY_PLIST="$LAUNCH_AGENTS_DIR/$ANTIGRAVITY_LABEL.plist"
+SUB2API_PLIST="$LAUNCH_AGENTS_DIR/$SUB2API_LABEL.plist"
 USAGE_PLIST="$LAUNCH_AGENTS_DIR/$USAGE_LABEL.plist"
 LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
 USER_GUI_DOMAIN="gui/$(id -u)"
@@ -117,6 +121,7 @@ resolve_signing() {
   : "${CLAUDE_APP_GROUP:="${TEAM_ID}.group.local.claude-quota-monitor"}"
   : "${GLM_APP_GROUP:="${TEAM_ID}.group.local.glm-quota-monitor"}"
   : "${ANTIGRAVITY_APP_GROUP:="${TEAM_ID}.group.local.antigravity-quota-monitor"}"
+  : "${SUB2API_APP_GROUP:="${TEAM_ID}.group.local.sub2api-quota-monitor"}"
   : "${USAGE_APP_GROUP:="${TEAM_ID}.group.local.usage-quota-monitor"}"
 
   echo "==> Using signing identity: $SIGNING_IDENTITY"
@@ -204,6 +209,14 @@ public enum AntigravityQuotaAppGroup {
 }
 EOF
 
+  cat > "$PROJECT_ROOT/Sources/Sub2APIQuotaCore/AppGroupConfig.generated.swift" <<EOF
+import Foundation
+
+public enum Sub2APIQuotaAppGroup {
+    public static let identifier = "$SUB2API_APP_GROUP"
+}
+EOF
+
   cat > "$PROJECT_ROOT/Sources/UsageQuotaCore/AppGroupConfig.generated.swift" <<EOF
 import Foundation
 
@@ -227,6 +240,7 @@ write_entitlements() {
 		<string>$CLAUDE_APP_GROUP</string>
 		<string>$GLM_APP_GROUP</string>
 		<string>$ANTIGRAVITY_APP_GROUP</string>
+		<string>$SUB2API_APP_GROUP</string>
 		<string>$USAGE_APP_GROUP</string>
 	</array>
 </dict>
@@ -246,6 +260,7 @@ EOF
 		<string>$CLAUDE_APP_GROUP</string>
 		<string>$GLM_APP_GROUP</string>
 		<string>$ANTIGRAVITY_APP_GROUP</string>
+		<string>$SUB2API_APP_GROUP</string>
 		<string>$USAGE_APP_GROUP</string>
 	</array>
 </dict>
@@ -263,6 +278,7 @@ EOF
 		<string>$CLAUDE_APP_GROUP</string>
 		<string>$GLM_APP_GROUP</string>
 		<string>$ANTIGRAVITY_APP_GROUP</string>
+		<string>$SUB2API_APP_GROUP</string>
 		<string>$USAGE_APP_GROUP</string>
 	</array>
 </dict>
@@ -356,21 +372,24 @@ build_snapshot_tools() {
   swift build --package-path "$PROJECT_ROOT" -c release --product ClaudeQuotaSnapshotTool
   swift build --package-path "$PROJECT_ROOT" -c release --product GLMQuotaSnapshotTool
   swift build --package-path "$PROJECT_ROOT" -c release --product AntigravityQuotaSnapshotTool
+  swift build --package-path "$PROJECT_ROOT" -c release --product Sub2APIQuotaSnapshotTool
   swift build --package-path "$PROJECT_ROOT" -c release --product UsageQuotaSnapshotTool
 }
 
 install_snapshot_tools() {
   echo "==> Installing snapshot tools"
-  mkdir -p "$CODEX_RUNTIME_DIR/logs" "$CLAUDE_RUNTIME_DIR/logs" "$GLM_RUNTIME_DIR/logs" "$ANTIGRAVITY_RUNTIME_DIR/logs" "$USAGE_RUNTIME_DIR/logs"
+  mkdir -p "$CODEX_RUNTIME_DIR/logs" "$CLAUDE_RUNTIME_DIR/logs" "$GLM_RUNTIME_DIR/logs" "$ANTIGRAVITY_RUNTIME_DIR/logs" "$SUB2API_RUNTIME_DIR/logs" "$USAGE_RUNTIME_DIR/logs"
   cp "$BIN_PATH/CodexQuotaSnapshotTool" "$CODEX_TOOL_RUNTIME"
   cp "$BIN_PATH/ClaudeQuotaSnapshotTool" "$CLAUDE_TOOL_RUNTIME"
   cp "$BIN_PATH/GLMQuotaSnapshotTool" "$GLM_TOOL_RUNTIME"
   cp "$BIN_PATH/AntigravityQuotaSnapshotTool" "$ANTIGRAVITY_TOOL_RUNTIME"
+  cp "$BIN_PATH/Sub2APIQuotaSnapshotTool" "$SUB2API_TOOL_RUNTIME"
   cp "$BIN_PATH/UsageQuotaSnapshotTool" "$USAGE_TOOL_RUNTIME"
   codesign --force --sign "$SIGNING_IDENTITY" --timestamp=none --entitlements "$GENERATED_DIR/RuntimeTool.entitlements" "$CODEX_TOOL_RUNTIME"
   codesign --force --sign "$SIGNING_IDENTITY" --timestamp=none --entitlements "$GENERATED_DIR/RuntimeTool.entitlements" "$CLAUDE_TOOL_RUNTIME"
   codesign --force --sign "$SIGNING_IDENTITY" --timestamp=none --entitlements "$GENERATED_DIR/RuntimeTool.entitlements" "$GLM_TOOL_RUNTIME"
   codesign --force --sign "$SIGNING_IDENTITY" --timestamp=none --entitlements "$GENERATED_DIR/RuntimeTool.entitlements" "$ANTIGRAVITY_TOOL_RUNTIME"
+  codesign --force --sign "$SIGNING_IDENTITY" --timestamp=none --entitlements "$GENERATED_DIR/RuntimeTool.entitlements" "$SUB2API_TOOL_RUNTIME"
   codesign --force --sign "$SIGNING_IDENTITY" --timestamp=none --entitlements "$GENERATED_DIR/RuntimeTool.entitlements" "$USAGE_TOOL_RUNTIME"
 }
 
@@ -409,11 +428,13 @@ install_launch_agents() {
   write_launch_agent "$CLAUDE_LABEL" "$CLAUDE_TOOL_RUNTIME" "$CLAUDE_PLIST"
   write_launch_agent "$GLM_LABEL" "$GLM_TOOL_RUNTIME" "$GLM_PLIST"
   write_launch_agent "$ANTIGRAVITY_LABEL" "$ANTIGRAVITY_TOOL_RUNTIME" "$ANTIGRAVITY_PLIST"
+  write_launch_agent "$SUB2API_LABEL" "$SUB2API_TOOL_RUNTIME" "$SUB2API_PLIST"
   write_launch_agent "$USAGE_LABEL" "$USAGE_TOOL_RUNTIME" "$USAGE_PLIST"
   reload_launch_agent "$CODEX_PLIST"
   reload_launch_agent "$CLAUDE_PLIST"
   reload_launch_agent "$GLM_PLIST"
   reload_launch_agent "$ANTIGRAVITY_PLIST"
+  reload_launch_agent "$SUB2API_PLIST"
   reload_launch_agent "$USAGE_PLIST"
 }
 
@@ -423,6 +444,7 @@ prime_snapshots() {
   "$CLAUDE_TOOL_RUNTIME"
   "$GLM_TOOL_RUNTIME"
   "$ANTIGRAVITY_TOOL_RUNTIME"
+  "$SUB2API_TOOL_RUNTIME"
   "$USAGE_TOOL_RUNTIME"
 }
 
@@ -456,6 +478,7 @@ print_summary() {
   echo "Claude: $CLAUDE_TOOL_RUNTIME"
   echo "GLM:    $GLM_TOOL_RUNTIME"
   echo "Antigravity: $ANTIGRAVITY_TOOL_RUNTIME"
+  echo "Sub2API: $SUB2API_TOOL_RUNTIME"
   echo "Usage:  $USAGE_TOOL_RUNTIME"
 }
 

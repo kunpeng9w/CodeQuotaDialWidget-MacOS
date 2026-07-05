@@ -513,6 +513,7 @@ public struct UsageSources: Codable, Equatable, Sendable {
     private static func displayName(_ source: String) -> String {
         switch source.lowercased() {
         case "zcode": return "ZCode"
+        case "sub2api": return "Sub2API"
         default: return source
         }
     }
