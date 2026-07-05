@@ -64,6 +64,11 @@ struct UsagePanelView: View {
                 }
             }
             .padding(Theme.contentPadding)
+            // Cap the content column so cards stop stretching on very wide
+            // windows, and center the capped column so leftover width becomes
+            // symmetric margins instead of a lopsided gap.
+            .frame(maxWidth: usageContentMaxWidth, alignment: .topLeading)
+            .frame(maxWidth: .infinity)
         }
         .navigationTitle("消耗统计")
         .navigationSubtitle(snapshot.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
@@ -826,6 +831,10 @@ private struct UsageDetailCard: View {
 
 private let usageCalendarCardHeight: CGFloat = 270
 
+/// Upper bound for the panel's content column; beyond this the column stays
+/// centered and the extra window width becomes symmetric margins.
+private let usageContentMaxWidth: CGFloat = 1024
+
 private struct CompactDatePickerButton: View {
     @Binding var date: Date
     var range: ClosedRange<Date>
@@ -1008,16 +1017,19 @@ private struct WeekTrendChart: View {
 
                     HStack(alignment: .bottom, spacing: 8) {
                         ForEach(days) { day in
+                            // Slim bar centered in its equal-width column, so
+                            // wide windows don't turn each day into a slab.
                             RoundedRectangle(cornerRadius: 3)
                                 .fill(barColor(day))
-                                .frame(maxWidth: .infinity)
                                 .frame(height: max(4, 88 * day.totalCost / maxCost))
+                                .frame(maxWidth: 44)
                                 .overlay {
                                     if day.period == todayPeriod {
                                         RoundedRectangle(cornerRadius: 3)
                                             .strokeBorder(Color.primary.opacity(0.55), lineWidth: 1.5)
                                     }
                                 }
+                                .frame(maxWidth: .infinity)
                         }
                     }
                 }
