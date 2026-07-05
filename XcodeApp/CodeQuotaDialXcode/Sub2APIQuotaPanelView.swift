@@ -570,6 +570,9 @@ private struct TrendCard: View {
             }
 
             VStack(spacing: 5) {
+                // The bar area stretches to whatever height the card gets from
+                // the grid row (the today card is usually taller), so bars are
+                // sized from the measured height instead of a fixed constant.
                 ZStack(alignment: .bottom) {
                     GeometryReader { geo in
                         let y = geo.size.height * (1 - CGFloat(average / maxCost))
@@ -582,20 +585,24 @@ private struct TrendCard: View {
 
                     HStack(alignment: .bottom, spacing: 8) {
                         ForEach(weekDays) { day in
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(Color.indigo.opacity(0.35 + 0.6 * (day.summary.actualCost / maxCost)))
-                                .frame(maxWidth: .infinity)
-                                .frame(height: max(4, 88 * day.summary.actualCost / maxCost))
-                                .overlay {
-                                    if day.period == todayPeriod {
-                                        RoundedRectangle(cornerRadius: 3)
-                                            .strokeBorder(Color.primary.opacity(0.55), lineWidth: 1.5)
-                                    }
+                            GeometryReader { geo in
+                                VStack(spacing: 0) {
+                                    Spacer(minLength: 0)
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .fill(Color.indigo.opacity(0.35 + 0.6 * (day.summary.actualCost / maxCost)))
+                                        .frame(height: max(4, geo.size.height * day.summary.actualCost / maxCost))
+                                        .overlay {
+                                            if day.period == todayPeriod {
+                                                RoundedRectangle(cornerRadius: 3)
+                                                    .strokeBorder(Color.primary.opacity(0.55), lineWidth: 1.5)
+                                            }
+                                        }
                                 }
+                            }
                         }
                     }
                 }
-                .frame(height: 88)
+                .frame(minHeight: 88, maxHeight: .infinity)
 
                 HStack(spacing: 8) {
                     ForEach(weekDays) { day in
