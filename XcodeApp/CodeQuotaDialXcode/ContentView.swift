@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var selection: DashboardSection = .codex
+    @State private var selection: DashboardSection = DashboardSection.launchOverride ?? .codex
 
     var body: some View {
         NavigationSplitView {
@@ -102,6 +102,15 @@ private struct SectionIcon: View {
                 .foregroundStyle(section.accent)
                 .frame(width: 22, height: 22)
         }
+    }
+}
+
+extension DashboardSection {
+    /// 调试/截图用的初始面板覆盖：
+    /// `open -a CodeQuotaDialXcode --args -initialSection usage`
+    static var launchOverride: DashboardSection? {
+        UserDefaults.standard.string(forKey: "initialSection")
+            .flatMap(DashboardSection.init(rawValue:))
     }
 }
 
