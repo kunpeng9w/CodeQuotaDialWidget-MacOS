@@ -18,6 +18,8 @@ struct PanelScaffold<Content: View>: View {
     var statusLine: String?
     var agent: LaunchAgentController?
     var errorText: String?
+    /// 头部尾随的附加控件（如范围 Picker），排在后台开关之前。
+    var headerAccessory: AnyView?
     var maxContentWidth: CGFloat = 1024
     @ViewBuilder var content: () -> Content
 
@@ -62,6 +64,10 @@ struct PanelScaffold<Content: View>: View {
             }
 
             Spacer(minLength: DS.Space.s)
+
+            if let headerAccessory {
+                headerAccessory
+            }
 
             if let agent {
                 CompactAgentToggle(controller: agent)

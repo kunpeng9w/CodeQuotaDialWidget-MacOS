@@ -27,48 +27,26 @@ struct UsagePanelView: View {
     private let refreshTimer = Timer.publish(every: 600, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.spacing) {
-                if let badge = RemoteStatusBadge(sources: snapshot?.sources) {
-                    badge.font(.caption2.weight(.bold))
-                }
+        PanelScaffold(
+            section: .usage,
+            updatedAt: snapshot?.generatedAt,
+            badges: remoteBadges,
+            agent: agent,
+            errorText: errorText ?? agent.lastError,
+            headerAccessory: scopes.count > 1 ? AnyView(scopePicker) : nil
+        ) {
+            let calendarDays = selectedScope?.calendarDays ?? []
+            calendarDetailSection(days: calendarDays)
 
-                LaunchAgentToggleRow(controller: agent)
+            PeriodTiles(
+                weekly: selectedScope?.weekly,
+                monthly: selectedScope?.monthly,
+                total: selectedScope?.total
+            )
 
-                if scopes.count > 1 {
-                    Picker("范围", selection: $selectedScopeID) {
-                        ForEach(scopes) { scope in
-                            Text(scope.title)
-                                .tag(scope.id)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(maxWidth: 260, alignment: .leading)
-                }
+            WeekTrendChart(days: selectedScope?.weekDays ?? [])
 
-                let calendarDays = selectedScope?.calendarDays ?? []
-                calendarDetailSection(days: calendarDays)
-
-                PeriodTiles(
-                    weekly: selectedScope?.weekly,
-                    monthly: selectedScope?.monthly,
-                    total: selectedScope?.total
-                )
-
-                WeekTrendChart(days: selectedScope?.weekDays ?? [])
-
-                ModelBreakdownCard(breakdowns: selectedScope?.breakdowns ?? [])
-
-                if let message = errorText ?? agent.lastError {
-                    InlineBanner(text: message)
-                }
-            }
-            .padding(Theme.contentPadding)
-            // Cap the content column so cards stop stretching on very wide
-            // windows, and center the capped column so leftover width becomes
-            // symmetric margins instead of a lopsided gap.
-            .frame(maxWidth: usageContentMaxWidth, alignment: .topLeading)
-            .frame(maxWidth: .infinity)
+            ModelBreakdownCard(breakdowns: selectedScope?.breakdowns ?? [])
         }
         .navigationTitle("消耗统计")
         .navigationSubtitle(snapshot.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
@@ -96,6 +74,23 @@ struct UsagePanelView: View {
         .onChange(of: detailSelection) { _, newSelection in
             syncRangeDates(to: newSelection)
         }
+    }
+
+    private var remoteBadges: [PanelBadge] {
+        guard let sources = snapshot?.sources, let label = sources.statusLabel else { return [] }
+        return [PanelBadge(text: label, tint: sources.hasMissingSources ? .orange : .blue)]
+    }
+
+    private var scopePicker: some View {
+        Picker("范围", selection: $selectedScopeID) {
+            ForEach(scopes) { scope in
+                Text(scope.title)
+                    .tag(scope.id)
+            }
+        }
+        .pickerStyle(.menu)
+        .labelsHidden()
+        .fixedSize()
     }
 
     /// Always side by side: the window's minimum width (ContentView) is set so
@@ -295,26 +290,6 @@ private struct UsageScopeData: Identifiable {
     }
 }
 
-private struct RemoteStatusBadge: View {
-    private let label: String
-    private let warning: Bool
-
-    init?(sources: UsageSources?) {
-        guard let sources, let label = sources.statusLabel else { return nil }
-        self.label = label
-        warning = sources.hasMissingSources
-    }
-
-    var body: some View {
-        Text(label)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
-            .background((warning ? Color.orange : Color.blue).opacity(0.15), in: Capsule())
-            .foregroundStyle(warning ? Color.orange : Color.blue)
-            .lineLimit(1)
-    }
-}
-
 /// What the inline detail card beside or below the calendar renders.
 enum CalendarDetailSelection: Equatable {
     case today
@@ -414,7 +389,7 @@ private struct UsageHeatmap: View {
         }
         .padding(Theme.cardPadding)
         .frame(width: cardWidth, height: usageCalendarCardHeight, alignment: .topLeading)
-        .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius))
+        .dsCardSurfaceOnly()
         .onAppear(perform: clampDisplayedMonth)
         .onChange(of: days.map(\.period)) { _, _ in
             clampDisplayedMonth()
@@ -785,7 +760,7 @@ private struct UsageDetailCard: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .frame(height: usageCalendarCardHeight, alignment: .topLeading)
-        .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius))
+        .dsCardSurfaceOnly()
         .onAppear(perform: normalizeRangeDates)
         .onChange(of: days.map(\.period)) { _, _ in
             normalizeRangeDates()
@@ -825,10 +800,6 @@ private struct UsageDetailCard: View {
 }
 
 private let usageCalendarCardHeight: CGFloat = 270
-
-/// Upper bound for the panel's content column; beyond this the column stays
-/// centered and the extra window width becomes symmetric margins.
-private let usageContentMaxWidth: CGFloat = 1024
 
 private struct CompactDatePickerButton: View {
     @Binding var date: Date
@@ -908,31 +879,12 @@ private struct TokenValueRow: View {
     var summary: UsageSummary?
 
     var body: some View {
-        HStack(spacing: Theme.cardSpacing) {
-            TokenValue(label: "输入", value: summary?.inputTokens)
-            TokenValue(label: "输出", value: summary?.outputTokens)
-            TokenValue(label: "缓存写", value: summary?.cacheCreationTokens)
-            TokenValue(label: "缓存读", value: summary?.cacheReadTokens)
+        HStack(spacing: DS.Space.s) {
+            KPIInline(label: "输入", value: compactNumber(summary?.inputTokens))
+            KPIInline(label: "输出", value: compactNumber(summary?.outputTokens))
+            KPIInline(label: "缓存写", value: compactNumber(summary?.cacheCreationTokens))
+            KPIInline(label: "缓存读", value: compactNumber(summary?.cacheReadTokens))
         }
-    }
-}
-
-private struct TokenValue: View {
-    var label: String
-    var value: Int?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            Text(compactNumber(value))
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -942,118 +894,43 @@ private struct PeriodTiles: View {
     var total: UsageSummary?
 
     var body: some View {
-        HStack(spacing: Theme.cardSpacing) {
-            PeriodTile(title: "本周", summary: weekly)
-            PeriodTile(title: "本月", summary: monthly)
-            PeriodTile(title: "总计", summary: total)
+        HStack(spacing: DS.Space.s) {
+            tile("本周", weekly)
+            tile("本月", monthly)
+            tile("总计", total)
         }
     }
-}
 
-private struct PeriodTile: View {
-    var title: String
-    var summary: UsageSummary?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            Text(costText(summary?.totalCost))
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            Text("\(compactNumber(summary?.totalTokens)) tokens")
-                .font(.system(size: 10))
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
-        }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 9)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius))
+    private func tile(_ title: String, _ summary: UsageSummary?) -> some View {
+        KPICard(
+            label: title,
+            value: costText(summary?.totalCost),
+            secondary: "\(compactNumber(summary?.totalTokens)) tokens"
+        )
     }
 }
 
 private struct WeekTrendChart: View {
     var days: [UsageDay]
 
-    private var maxCost: Double { max(days.map(\.totalCost).max() ?? 0, 0.01) }
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s) {
+            DSSectionHeader("本周趋势", subtitle: "均值 \(costText(average))")
+            DSTrendChart(
+                days: days.map { .init(period: $0.period, value: $0.totalCost) },
+                tint: .blue
+            )
+        }
+        .dsCard()
+    }
+
     /// Average over elapsed days only (through today). Future days in the current
     /// week are still zero, so including them would understate the daily average.
     private var average: Double {
-        let elapsed = days.filter { $0.period <= todayPeriod }
-        return elapsed.isEmpty ? 0 : elapsed.map(\.totalCost).reduce(0, +) / Double(elapsed.count)
-    }
-    private var todayPeriod: String { usageDayFormatter.string(from: Date()) }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("本周趋势")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text("均值 \(costText(average))")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-
-            VStack(spacing: 5) {
-                ZStack(alignment: .bottom) {
-                    GeometryReader { geo in
-                        let y = geo.size.height * (1 - CGFloat(average / maxCost))
-                        Path { path in
-                            path.move(to: CGPoint(x: 0, y: y))
-                            path.addLine(to: CGPoint(x: geo.size.width, y: y))
-                        }
-                        .stroke(Color.secondary.opacity(0.4), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                    }
-
-                    HStack(alignment: .bottom, spacing: 8) {
-                        ForEach(days) { day in
-                            // Slim bar centered in its equal-width column, so
-                            // wide windows don't turn each day into a slab.
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(barColor(day))
-                                .frame(height: max(4, 88 * day.totalCost / maxCost))
-                                .frame(maxWidth: 44)
-                                .overlay {
-                                    if day.period == todayPeriod {
-                                        RoundedRectangle(cornerRadius: 3)
-                                            .strokeBorder(Color.primary.opacity(0.55), lineWidth: 1.5)
-                                    }
-                                }
-                                .frame(maxWidth: .infinity)
-                        }
-                    }
-                }
-                .frame(height: 88)
-
-                HStack(spacing: 8) {
-                    ForEach(days) { day in
-                        VStack(spacing: 1) {
-                            Text(weekdayShort(day.period))
-                                .font(.system(size: 10, weight: day.period == todayPeriod ? .semibold : .regular))
-                                .foregroundStyle(day.period == todayPeriod ? Color.primary : Color.secondary)
-                            Text(costText(day.totalCost))
-                                .font(.system(size: 9))
-                                .foregroundStyle(.tertiary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.6)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                }
-            }
-        }
-        .padding(Theme.cardPadding)
-        .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius))
-    }
-
-    private func barColor(_ day: UsageDay) -> Color {
-        let intensity = maxCost > 0 ? day.totalCost / maxCost : 0
-        return Color.blue.opacity(0.35 + 0.6 * intensity)
+        TrendDaysLogic.elapsedAverage(
+            days.map { TrendDayValue(period: $0.period, value: $0.totalCost) },
+            todayPeriod: usageDayFormatter.string(from: Date())
+        )
     }
 }
 
@@ -1085,11 +962,7 @@ private struct ModelBreakdownCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("模型分布")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
+            DSSectionHeader("模型分布") {
                 Picker("", selection: $period) {
                     ForEach(ModelPeriod.allCases) { option in
                         Text(option.rawValue).tag(option)
@@ -1103,6 +976,7 @@ private struct ModelBreakdownCard: View {
             if let items = section?.items, !items.isEmpty {
                 ForEach(items.prefix(6)) { item in
                     ModelRow(item: item)
+                        .dsHoverHighlight()
                 }
             } else {
                 Text("暂无模型数据")
@@ -1111,9 +985,7 @@ private struct ModelBreakdownCard: View {
                     .padding(.vertical, 4)
             }
         }
-        .padding(Theme.cardPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius))
+        .dsCard()
     }
 }
 

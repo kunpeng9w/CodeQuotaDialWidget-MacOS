@@ -42,4 +42,16 @@ extension View {
     ) -> some View {
         modifier(DSCardModifier(elevation: elevation, padded: padded, tint: tint))
     }
+
+    /// 只换卡片表面、不注入 padding / maxWidth 的版本，
+    /// 供自带固定几何的旧卡片（如消耗统计的日历热力图）换皮。
+    func dsCardSurfaceOnly() -> some View {
+        let shape = RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+        return background {
+            shape
+                .fill(Color(nsColor: .controlBackgroundColor))
+                .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
+        }
+        .overlay(shape.strokeBorder(.quaternary, lineWidth: 1))
+    }
 }
