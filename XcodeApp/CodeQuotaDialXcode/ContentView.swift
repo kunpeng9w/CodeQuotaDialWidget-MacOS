@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var selection: DashboardSection = DashboardSection.launchOverride ?? .codex
+    @State private var selection: DashboardSection = DashboardSection.launchOverride ?? .overview
 
     var body: some View {
         NavigationSplitView {
@@ -26,6 +26,8 @@ struct ContentView: View {
 
     private var sidebar: some View {
         List(selection: $selection) {
+            sidebarRow(.overview).tag(DashboardSection.overview)
+
             Section("额度监控") {
                 ForEach(DashboardSection.quotaCases) { section in
                     sidebarRow(section).tag(section)
@@ -72,6 +74,7 @@ struct ContentView: View {
 
     @ViewBuilder private var detail: some View {
         switch selection {
+        case .overview:    OverviewPanelView(onNavigate: { selection = $0 })
         case .codex:       CodexQuotaPanelView()
         case .claude:      ClaudeQuotaPanelView()
         case .glm:         GLMQuotaPanelView()
@@ -115,6 +118,7 @@ extension DashboardSection {
 }
 
 enum DashboardSection: String, CaseIterable, Identifiable {
+    case overview
     case codex
     case claude
     case glm
@@ -130,6 +134,7 @@ enum DashboardSection: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        case .overview:    return "总览"
         case .codex:       return "Codex"
         case .claude:      return "Claude"
         case .glm:         return "GLM"
@@ -146,13 +151,14 @@ enum DashboardSection: String, CaseIterable, Identifiable {
     var iconAsset: String? {
         switch self {
         case .codex, .claude, .glm, .antigravity, .sub2api: return rawValue
-        case .usage, .modelPrices, .settings: return nil
+        case .overview, .usage, .modelPrices, .settings: return nil
         }
     }
 
     /// Fallback glyph for sections without a bundled app icon.
     var systemImage: String {
         switch self {
+        case .overview:    return "square.grid.2x2"
         case .codex:       return "chevron.left.forwardslash.chevron.right"
         case .claude:      return "sparkles"
         case .glm:         return "cube"
@@ -166,6 +172,7 @@ enum DashboardSection: String, CaseIterable, Identifiable {
 
     var accent: Color {
         switch self {
+        case .overview:    return .accentColor
         case .codex:       return .teal
         case .claude:      return .orange
         case .glm:         return .blue
