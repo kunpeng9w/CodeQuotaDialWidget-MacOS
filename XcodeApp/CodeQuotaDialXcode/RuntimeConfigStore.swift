@@ -14,14 +14,23 @@ struct RuntimeConfig: Equatable {
     var glmApiKey: String
     var zcodeUsageEnabled: Bool
     var sub2apiAccounts: [Sub2APIAccountEntry]
+    /// 在总览/侧栏中隐藏的额度监控服务（DashboardSection rawValue）。
+    /// 存「禁用」而非「启用」，缺省空数组 = 全部显示。
+    var disabledProviders: [String]
 
     static let empty = RuntimeConfig(
         proxyURL: "",
         remoteHosts: [],
         glmApiKey: "",
         zcodeUsageEnabled: true,
-        sub2apiAccounts: []
+        sub2apiAccounts: [],
+        disabledProviders: []
     )
+}
+
+extension Notification.Name {
+    /// app 内任一面板保存运行时配置后广播；导航与总览据此刷新 provider 开关。
+    static let runtimeConfigDidChange = Notification.Name("RuntimeConfigDidChange")
 }
 
 /// One sub2api relay account (name + base URL + key), stored plaintext in the
@@ -64,12 +73,16 @@ enum RuntimeConfigStore {
                 apiKey: apiKey
             )
         }
+        let disabledProviders = ((object["disabledProviders"] as? [String]) ?? [])
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
         return RuntimeConfig(
             proxyURL: proxy,
             remoteHosts: hosts,
             glmApiKey: glmApiKey,
             zcodeUsageEnabled: zcodeUsageEnabled,
-            sub2apiAccounts: sub2apiAccounts
+            sub2apiAccounts: sub2apiAccounts,
+            disabledProviders: disabledProviders
         )
     }
 
@@ -88,7 +101,8 @@ enum RuntimeConfigStore {
                     "baseURL": account.baseURL.trimmingCharacters(in: .whitespacesAndNewlines),
                     "apiKey": account.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
                 ]
-            }
+            },
+            "disabledProviders": config.disabledProviders
         ]
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),
@@ -97,5 +111,6 @@ enum RuntimeConfigStore {
         let data = try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys])
         try data.write(to: url, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+        NotificationCenter.default.post(name: .runtimeConfigDidChange, object: nil)
     }
 }

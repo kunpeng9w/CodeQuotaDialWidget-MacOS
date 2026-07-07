@@ -11,9 +11,29 @@ struct SettingsPanelView: View {
     @State private var savedConfig = RuntimeConfig.empty
     @State private var statusText: String?
     @State private var isError = false
+    @State private var disabledProviders: Set<String> = []
 
     var body: some View {
         Form {
+            Section {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DS.Space.xs) {
+                        ForEach(DashboardSection.quotaCases) { section in
+                            ProviderToggleChip(
+                                section: section,
+                                isOn: !disabledProviders.contains(section.rawValue),
+                                action: { toggleProvider(section) }
+                            )
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+            } header: {
+                Label("主页面显示", systemImage: "square.grid.2x2")
+            } footer: {
+                Text("选择在总览与侧栏中显示的额度监控服务。熄灭后隐藏该服务并停止其后台自动刷新；点亮恢复显示并重新开启。即时生效，无需保存。")
+            }
+
             Section {
                 TextField("代理地址", text: $proxyURL, prompt: Text("http://127.0.0.1:7897"))
                     .font(.system(.body, design: .monospaced))
@@ -64,14 +84,15 @@ struct SettingsPanelView: View {
     }
 
     private var editedConfig: RuntimeConfig {
-        // glmApiKey and the sub2api accounts are owned by their panels; carry
-        // the saved values through untouched so saving here never wipes them.
+        // glmApiKey / sub2api accounts / provider 开关由各自的控件即时持久化；
+        // carry the saved values through untouched so saving here never wipes them.
         RuntimeConfig(
             proxyURL: proxyURL.trimmingCharacters(in: .whitespaces),
             remoteHosts: parseHosts(remoteHostsText),
             glmApiKey: savedConfig.glmApiKey,
             zcodeUsageEnabled: zcodeUsageEnabled,
-            sub2apiAccounts: savedConfig.sub2apiAccounts
+            sub2apiAccounts: savedConfig.sub2apiAccounts,
+            disabledProviders: savedConfig.disabledProviders
         )
     }
 
@@ -83,8 +104,61 @@ struct SettingsPanelView: View {
         proxyURL = config.proxyURL
         remoteHostsText = config.remoteHosts.joined(separator: "\n")
         zcodeUsageEnabled = config.zcodeUsageEnabled
+        disabledProviders = Set(config.disabledProviders)
         statusText = nil
         isError = false
+    }
+
+    /// provider 显示开关：即时持久化（独立于保存/还原的表单流），
+    /// 并联动开/关该服务的后台刷新代理。
+    private func toggleProvider(_ section: DashboardSection) {
+        let turningOff = !disabledProviders.contains(section.rawValue)
+        var disabled = disabledProviders
+        if turningOff {
+            disabled.insert(section.rawValue)
+        } else {
+            disabled.remove(section.rawValue)
+        }
+
+        // 以磁盘为准读写，保住其他面板的即时修改；表单里未保存的编辑不受影响。
+        var config = RuntimeConfigStore.load()
+        config.disabledProviders = disabled.sorted()
+        do {
+            try RuntimeConfigStore.save(config)
+            disabledProviders = disabled
+            savedConfig.disabledProviders = disabled.sorted()
+            statusText = nil
+            isError = false
+        } catch {
+            statusText = "保存失败：\(error.localizedDescription)"
+            isError = true
+            return
+        }
+
+        guard let spec = agentSpec(for: section) else { return }
+        Task {
+            do {
+                try await LaunchAgentController.setAgentRunning(
+                    !turningOff,
+                    label: spec.label,
+                    plistPath: spec.plist
+                )
+            } catch {
+                statusText = error.localizedDescription
+                isError = true
+            }
+        }
+    }
+
+    private func agentSpec(for section: DashboardSection) -> (label: String, plist: String)? {
+        switch section {
+        case .codex: return LaunchAgentLabels.codex
+        case .claude: return LaunchAgentLabels.claude
+        case .glm: return LaunchAgentLabels.glm
+        case .antigravity: return LaunchAgentLabels.antigravity
+        case .sub2api: return LaunchAgentLabels.sub2api
+        case .overview, .usage, .modelPrices, .settings: return nil
+        }
     }
 
     private func save() {

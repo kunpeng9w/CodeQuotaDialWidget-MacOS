@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var selection: DashboardSection = DashboardSection.launchOverride ?? .overview
+    /// 设置页「主页面显示」里熄灭的服务（rawValue），侧栏与详情路由据此过滤。
+    @State private var disabledProviders: Set<String> = []
 
     var body: some View {
         NavigationSplitView {
@@ -22,15 +24,33 @@ struct ContentView: View {
             .frame(minWidth: 700)
         }
         .navigationSplitViewStyle(.balanced)
+        .onAppear(perform: reloadDisabledProviders)
+        .onReceive(NotificationCenter.default.publisher(for: .runtimeConfigDidChange)) { _ in
+            reloadDisabledProviders()
+        }
+    }
+
+    private var enabledQuotaCases: [DashboardSection] {
+        DashboardSection.quotaCases.filter { !disabledProviders.contains($0.rawValue) }
+    }
+
+    private func reloadDisabledProviders() {
+        disabledProviders = Set(RuntimeConfigStore.load().disabledProviders)
+        // 当前正停留在被隐藏的面板上时回落到总览。
+        if disabledProviders.contains(selection.rawValue) {
+            selection = .overview
+        }
     }
 
     private var sidebar: some View {
         List(selection: $selection) {
             sidebarRow(.overview).tag(DashboardSection.overview)
 
-            Section("额度监控") {
-                ForEach(DashboardSection.quotaCases) { section in
-                    sidebarRow(section).tag(section)
+            if !enabledQuotaCases.isEmpty {
+                Section("额度监控") {
+                    ForEach(enabledQuotaCases) { section in
+                        sidebarRow(section).tag(section)
+                    }
                 }
             }
 

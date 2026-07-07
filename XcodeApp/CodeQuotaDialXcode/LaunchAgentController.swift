@@ -62,6 +62,25 @@ final class LaunchAgentController: ObservableObject {
         }
     }
 
+    /// 一次性开/关某个后台刷新代理（设置页的 provider 显示开关用，
+    /// 无需常驻 controller）。plist 不存在时静默跳过（未安装）。
+    nonisolated static func setAgentRunning(
+        _ on: Bool,
+        label: String,
+        plistPath: String
+    ) async throws {
+        let domain = "gui/\(getuid())"
+        let path = (plistPath as NSString).expandingTildeInPath
+        guard FileManager.default.fileExists(atPath: path) else { return }
+        try await Task.detached(priority: .userInitiated) {
+            if on {
+                try enableAgent(domain: domain, label: label, plistPath: path)
+            } else {
+                try disableAgent(domain: domain, label: label)
+            }
+        }.value
+    }
+
     private func refreshStatusFromLaunchd() async {
         let domain = domain
         let label = label

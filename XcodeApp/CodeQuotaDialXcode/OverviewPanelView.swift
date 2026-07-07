@@ -19,6 +19,8 @@ struct OverviewPanelView: View {
     @State private var sub2api: Sub2APISnapshot?
     @State private var usage: UsageSnapshot?
     @State private var isRefreshing = false
+    /// 设置页「主页面显示」里熄灭的服务，卡片网格据此过滤。
+    @State private var disabledProviders: Set<String> = []
 
     var body: some View {
         // 总览不走 PanelScaffold：省掉大头部与区块标题，目标是默认窗口下
@@ -44,6 +46,13 @@ struct OverviewPanelView: View {
             }
         }
         .onAppear(perform: loadAll)
+        .onReceive(NotificationCenter.default.publisher(for: .runtimeConfigDidChange)) { _ in
+            disabledProviders = Set(RuntimeConfigStore.load().disabledProviders)
+        }
+    }
+
+    private func isEnabled(_ section: DashboardSection) -> Bool {
+        !disabledProviders.contains(section.rawValue)
     }
 
     private var providerGrid: some View {
@@ -56,6 +65,7 @@ struct OverviewPanelView: View {
             alignment: .leading,
             spacing: DS.Space.s
         ) {
+            if isEnabled(.codex) {
                 ProviderOverviewCard(
                     section: .codex,
                     plan: codex?.planType?.uppercased(),
@@ -64,6 +74,8 @@ struct OverviewPanelView: View {
                     warning: codex?.error,
                     onTap: { onNavigate(.codex) }
                 )
+            }
+            if isEnabled(.claude) {
                 ProviderOverviewCard(
                     section: .claude,
                     plan: claude?.planType?.uppercased(),
@@ -72,6 +84,8 @@ struct OverviewPanelView: View {
                     warning: claude?.error,
                     onTap: { onNavigate(.claude) }
                 )
+            }
+            if isEnabled(.glm) {
                 ProviderOverviewCard(
                     section: .glm,
                     plan: glm?.level?.uppercased(),
@@ -80,6 +94,8 @@ struct OverviewPanelView: View {
                     warning: glm?.error,
                     onTap: { onNavigate(.glm) }
                 )
+            }
+            if isEnabled(.antigravity) {
                 ProviderOverviewCard(
                     section: .antigravity,
                     plan: antigravity?.planType?.uppercased(),
@@ -88,6 +104,8 @@ struct OverviewPanelView: View {
                     warning: antigravity?.error,
                     onTap: { onNavigate(.antigravity) }
                 )
+            }
+            if isEnabled(.sub2api) {
                 ProviderOverviewCard(
                     section: .sub2api,
                     plan: sub2apiPrimaryReport?.planName,
@@ -96,6 +114,7 @@ struct OverviewPanelView: View {
                     warning: sub2api?.error ?? sub2apiPrimaryReport?.error,
                     onTap: { onNavigate(.sub2api) }
                 )
+            }
         }
     }
 
@@ -207,6 +226,7 @@ struct OverviewPanelView: View {
     // MARK: - 加载与刷新
 
     private func loadAll() {
+        disabledProviders = Set(RuntimeConfigStore.load().disabledProviders)
         codex = try? CodexQuotaSnapshotStore().load()
         claude = try? ClaudeQuotaSnapshotStore().load()
         glm = try? GLMQuotaSnapshotStore().load()
@@ -215,47 +235,73 @@ struct OverviewPanelView: View {
         usage = try? UsageSnapshotStore().load()
     }
 
+    /// 并发刷新所有「点亮」的服务；被隐藏的服务跳过（保留原快照）。
     private func refreshAll() async {
         isRefreshing = true
         defer { isRefreshing = false }
 
-        async let codexState = refreshQuotaPanelSnapshot(
-            store: CodexQuotaSnapshotStore(),
-            currentSnapshot: codex,
-            fallbackReason: "未返回额度窗口"
-        ) { CodexQuotaCollector().collect() }
-        async let claudeState = refreshQuotaPanelSnapshot(
-            store: ClaudeQuotaSnapshotStore(),
-            currentSnapshot: claude,
-            fallbackReason: "未返回额度窗口"
-        ) { ClaudeQuotaCollector().collect() }
-        async let glmState = refreshQuotaPanelSnapshot(
-            store: GLMQuotaSnapshotStore(),
-            currentSnapshot: glm,
-            fallbackReason: "未返回额度窗口"
-        ) { GLMQuotaCollector().collect() }
-        async let antigravityState = refreshQuotaPanelSnapshot(
-            store: AntigravityQuotaSnapshotStore(),
-            currentSnapshot: antigravity,
-            fallbackReason: "未返回目标模型额度"
-        ) { AntigravityQuotaCollector().collect() }
-        async let sub2apiState = refreshQuotaPanelSnapshot(
-            store: Sub2APIQuotaSnapshotStore(),
-            currentSnapshot: sub2api,
-            fallbackReason: "未返回账号数据"
-        ) { Sub2APIQuotaCollector().collect() }
+        async let newCodex = refreshCodexIfEnabled()
+        async let newClaude = refreshClaudeIfEnabled()
+        async let newGLM = refreshGLMIfEnabled()
+        async let newAntigravity = refreshAntigravityIfEnabled()
+        async let newSub2api = refreshSub2apiIfEnabled()
         let usageTask = Task.detached { UsageCollector().collect() }
 
-        codex = await codexState.snapshot
-        claude = await claudeState.snapshot
-        glm = await glmState.snapshot
-        antigravity = await antigravityState.snapshot
-        sub2api = await sub2apiState.snapshot
+        codex = await newCodex
+        claude = await newClaude
+        glm = await newGLM
+        antigravity = await newAntigravity
+        sub2api = await newSub2api
 
         let newUsage = await usageTask.value
         if (try? UsageSnapshotStore().save(newUsage)) != nil {
             usage = newUsage
             WidgetCenter.shared.reloadAllTimelines()
         }
+    }
+
+    private func refreshCodexIfEnabled() async -> CodexQuotaSnapshot? {
+        guard isEnabled(.codex) else { return codex }
+        return await refreshQuotaPanelSnapshot(
+            store: CodexQuotaSnapshotStore(),
+            currentSnapshot: codex,
+            fallbackReason: "未返回额度窗口"
+        ) { CodexQuotaCollector().collect() }.snapshot
+    }
+
+    private func refreshClaudeIfEnabled() async -> ClaudeQuotaSnapshot? {
+        guard isEnabled(.claude) else { return claude }
+        return await refreshQuotaPanelSnapshot(
+            store: ClaudeQuotaSnapshotStore(),
+            currentSnapshot: claude,
+            fallbackReason: "未返回额度窗口"
+        ) { ClaudeQuotaCollector().collect() }.snapshot
+    }
+
+    private func refreshGLMIfEnabled() async -> GLMQuotaSnapshot? {
+        guard isEnabled(.glm) else { return glm }
+        return await refreshQuotaPanelSnapshot(
+            store: GLMQuotaSnapshotStore(),
+            currentSnapshot: glm,
+            fallbackReason: "未返回额度窗口"
+        ) { GLMQuotaCollector().collect() }.snapshot
+    }
+
+    private func refreshAntigravityIfEnabled() async -> AntigravityQuotaSnapshot? {
+        guard isEnabled(.antigravity) else { return antigravity }
+        return await refreshQuotaPanelSnapshot(
+            store: AntigravityQuotaSnapshotStore(),
+            currentSnapshot: antigravity,
+            fallbackReason: "未返回目标模型额度"
+        ) { AntigravityQuotaCollector().collect() }.snapshot
+    }
+
+    private func refreshSub2apiIfEnabled() async -> Sub2APISnapshot? {
+        guard isEnabled(.sub2api) else { return sub2api }
+        return await refreshQuotaPanelSnapshot(
+            store: Sub2APIQuotaSnapshotStore(),
+            currentSnapshot: sub2api,
+            fallbackReason: "未返回账号数据"
+        ) { Sub2APIQuotaCollector().collect() }.snapshot
     }
 }
