@@ -15,7 +15,7 @@ struct SettingsPanelView: View {
     var body: some View {
         Form {
             Section {
-                TextField("http://127.0.0.1:7897", text: $proxyURL)
+                TextField("代理地址", text: $proxyURL, prompt: Text("http://127.0.0.1:7897"))
                     .font(.system(.body, design: .monospaced))
             } header: {
                 Label("网络代理", systemImage: "network")
@@ -42,20 +42,10 @@ struct SettingsPanelView: View {
             }
         }
         .formStyle(.grouped)
-        .safeAreaInset(edge: .bottom) { saveBar }
+        .textSelection(.enabled)
         .navigationTitle("设置")
-        .onAppear(perform: load)
-    }
-
-    private var saveBar: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 10) {
-                Button("保存") { save() }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!isDirty)
-                Button("还原") { load() }
-                    .disabled(!isDirty)
-                Spacer(minLength: 0)
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
                 if let statusText {
                     Text(statusText)
                         .font(.caption)
@@ -63,12 +53,14 @@ struct SettingsPanelView: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
+                Button("还原") { load() }
+                    .disabled(!isDirty)
+                Button("保存") { save() }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!isDirty)
             }
-            FootnoteRow(text: "保存后在对应面板点“刷新”，或等待后台自动刷新即可生效，无需重新安装。")
         }
-        .padding(.horizontal, DS.Space.xl)
-        .padding(.vertical, DS.Space.s)
-        .background(.bar)
+        .onAppear(perform: load)
     }
 
     private var editedConfig: RuntimeConfig {
