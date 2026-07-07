@@ -37,15 +37,16 @@ struct SettingsPanelView: View {
             }
 
             Section {
-                TextField("代理地址", text: $proxyURL, prompt: Text("http://127.0.0.1:7897"))
-                    .font(.system(.body, design: .monospaced))
+                TextField(
+                    "代理地址",
+                    text: $proxyURL,
+                    prompt: Text(systemProxyText ?? "当前系统代理探测中…")
+                )
+                .font(.system(.body, design: .monospaced))
             } header: {
                 Label("网络代理", systemImage: "network")
             } footer: {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("供 Codex / Claude / GLM 拉取额度时使用。留空=自动跟随 macOS 系统代理；填写=覆盖系统代理。")
-                    Text(systemProxyText ?? "正在探测当前系统代理…")
-                }
+                Text("供 Codex / Claude / GLM 拉取额度时使用。留空=自动跟随 macOS 系统代理；填写=覆盖系统代理。")
             }
 
             Section {
@@ -91,11 +92,11 @@ struct SettingsPanelView: View {
         }
     }
 
-    /// 实时解析当前系统代理（含 PAC，可能有网络等待），结果只做展示。
+    /// 实时解析当前系统代理（含 PAC，可能有网络等待），结果作为输入框占位符。
     private func probeSystemProxy() {
         Task.detached(priority: .utility) {
             let proxy = QuotaProxyResolver.curlProxy(for: "https://api.openai.com", manualOverride: nil)
-            let text = "当前系统代理（以 api.openai.com 为例）：\(proxy ?? "直连")"
+            let text = "当前系统代理：\(proxy ?? "直连")"
             await MainActor.run { systemProxyText = text }
         }
     }
