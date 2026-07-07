@@ -24,6 +24,8 @@ struct ClaudeQuotaPanelView: View {
                 QuotaGaugeCard(title: "本周", model: QuotaStatModel(snapshot?.weekly))
             }
 
+            AgentUsageTrendCard(agentName: "claude", tint: .orange)
+
             FootnoteRow(text: "桌面组件每 2 分钟读取快照")
         }
         .navigationTitle("Claude 额度")

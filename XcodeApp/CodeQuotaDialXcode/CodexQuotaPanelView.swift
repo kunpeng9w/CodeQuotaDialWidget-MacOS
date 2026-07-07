@@ -31,6 +31,8 @@ struct CodexQuotaPanelView: View {
                 }
             }
 
+            AgentUsageTrendCard(agentName: "codex", tint: .teal)
+
             FootnoteRow(text: "桌面组件每 2 分钟读取快照")
         }
         .navigationTitle("Codex 额度")
