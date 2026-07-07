@@ -44,28 +44,10 @@ enum Theme {
 
 // MARK: - 统一卡片表面
 
-/// 全 app 统一的卡片底：材质 + 细描边 + 连续圆角。用 `.cardSurface()` 套在任意内容上。
-struct CardSurface: ViewModifier {
-    var padded = true
-
-    func body(content: Content) -> some View {
-        content
-            .padding(padded ? Theme.cardPadding : 0)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                .regularMaterial,
-                in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                    .strokeBorder(.quaternary, lineWidth: 1)
-            )
-    }
-}
-
 extension View {
+    /// 兼容旧调用：转发到设计系统的 `dsCard`，防止两套卡片表面并存漂移。
     func cardSurface(padded: Bool = true) -> some View {
-        modifier(CardSurface(padded: padded))
+        dsCard(.raised, padded: padded)
     }
 }
 
@@ -150,36 +132,6 @@ struct FootnoteRow: View {
     }
 }
 
-// MARK: - 进度条
-
-struct ProgressBar: View {
-    let remainingPercent: Int?
-    let tone: QuotaTone
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color.secondary.opacity(0.15))
-                Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [tone.color, tone.color.opacity(0.7)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(width: geo.size.width * fraction)
-            }
-        }
-        .frame(height: 6)
-    }
-
-    private var fraction: Double {
-        guard let percent = remainingPercent else { return 0 }
-        return max(0, min(1, Double(percent) / 100))
-    }
-}
-
 // MARK: - 卡片数据模型
 
 /// 统一 Codex / GLM 两种窗口类型的展示数据，避免卡片组件依赖具体模型。
@@ -188,62 +140,6 @@ struct QuotaStatModel {
     var usedPercent: Int?
     var absoluteText: String?   // 例如 GLM 的 "remaining/total"
     var resetsAt: Date?
-}
-
-// MARK: - 额度卡片
-
-struct QuotaStatCard: View {
-    let title: String
-    let model: QuotaStatModel?
-
-    private var tone: QuotaTone { QuotaTone.from(remainingPercent: model?.remainingPercent) }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(model?.remainingPercent.map { "\($0)%" } ?? "--")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundStyle(tone.color)
-                    .minimumScaleFactor(0.7)
-                    .lineLimit(1)
-                if let used = model?.usedPercent {
-                    Text("已用 \(used)%")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-            }
-
-            ProgressBar(remainingPercent: model?.remainingPercent, tone: tone)
-
-            if let absolute = model?.absoluteText {
-                Text(absolute)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-
-            HStack {
-                Label("重置", systemImage: "clock.arrow.circlepath")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(model?.resetsAt.map { Self.resetFormatter.string(from: $0) } ?? "--")
-                    .foregroundStyle(.primary)
-            }
-            .font(.caption)
-        }
-        .cardSurface()
-    }
-
-    private static let resetFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "MM-dd HH:mm"
-        return formatter
-    }()
 }
 
 // MARK: - 后台运行状态
@@ -301,37 +197,3 @@ struct StatusDot: View {
     }
 }
 
-// MARK: - 后台开关行
-
-struct LaunchAgentToggleRow: View {
-    @ObservedObject var controller: LaunchAgentController
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "clock.arrow.2.circlepath")
-                .foregroundStyle(.secondary)
-            Toggle(isOn: Binding(
-                get: { controller.isRunning },
-                set: { controller.setRunning($0) }
-            )) {
-                Text("后台自动刷新")
-                    .font(.callout)
-            }
-            .toggleStyle(.switch)
-            .controlSize(.small)
-            .disabled(
-                controller.status == .notInstalled
-                    || controller.status == .checking
-                    || controller.isToggling
-            )
-
-            Spacer(minLength: 0)
-
-            StatusDot(status: controller.status)
-        }
-        .cardSurface()
-        .help(controller.status == .notInstalled
-              ? "未安装后台刷新，请在仓库内运行 script/install.command"
-              : "")
-    }
-}
