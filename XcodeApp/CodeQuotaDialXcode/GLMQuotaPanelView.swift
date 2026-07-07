@@ -16,30 +16,22 @@ struct GLMQuotaPanelView: View {
     )
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.spacing) {
-                if let level = snapshot?.level {
-                    TagBadge(text: level.uppercased(), tint: .blue)
-                }
+        PanelScaffold(
+            section: .glm,
+            updatedAt: snapshot?.generatedAt,
+            badges: snapshot?.level.map { [PanelBadge(text: $0.uppercased(), tint: .blue)] } ?? [],
+            agent: agent,
+            errorText: errorText ?? agent.lastError
+        ) {
+            apiKeyCard
 
-                LaunchAgentToggleRow(controller: agent)
-
-                apiKeyCard
-
-                HStack(spacing: Theme.cardSpacing) {
-                    QuotaStatCard(title: "工具类额度", model: QuotaStatModel(snapshot?.timeLimit))
-                    QuotaStatCard(title: "5h", model: QuotaStatModel(snapshot?.tokensLimit5))
-                    QuotaStatCard(title: "本周", model: QuotaStatModel(snapshot?.tokensLimitWeek))
-                }
-
-                if let message = errorText ?? agent.lastError {
-                    InlineBanner(text: message)
-                }
-
-                FootnoteRow(text: "桌面组件每 2 分钟读取快照")
+            HStack(spacing: DS.Space.s) {
+                gaugeCard(title: "工具类额度", window: snapshot?.timeLimit)
+                gaugeCard(title: "5h", window: snapshot?.tokensLimit5)
+                gaugeCard(title: "本周", window: snapshot?.tokensLimitWeek)
             }
-            .padding(Theme.contentPadding)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            FootnoteRow(text: "桌面组件每 2 分钟读取快照")
         }
         .navigationTitle("GLM 额度")
         .navigationSubtitle(snapshot.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
@@ -55,19 +47,24 @@ struct GLMQuotaPanelView: View {
         }
     }
 
+    // MARK: - 表盘卡
+
+    private func gaugeCard(title: String, window: GLMQuotaWindow?) -> some View {
+        let model = QuotaStatModel(window)
+        return QuotaGaugeCard(
+            title: title,
+            model: model,
+            detailLines: model.absoluteText.map { [$0] } ?? []
+        )
+    }
+
     // MARK: - API Key
 
     @ViewBuilder private var apiKeyCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("API Key")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
+        VStack(alignment: .leading, spacing: DS.Space.xs) {
+            DSSectionHeader("API Key") {
                 if keyIsSet && !isEditingKey {
-                    Text("已设置")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.green)
+                    TagBadge(text: "已设置", tint: .green)
                 }
             }
 
@@ -112,7 +109,7 @@ struct GLMQuotaPanelView: View {
                 }
             }
         }
-        .cardSurface()
+        .dsCard()
     }
 
     private func saveApiKey() {

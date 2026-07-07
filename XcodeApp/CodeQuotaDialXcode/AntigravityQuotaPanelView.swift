@@ -12,40 +12,31 @@ struct AntigravityQuotaPanelView: View {
     )
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.spacing) {
-                if snapshot?.planType != nil || snapshot?.email != nil {
-                    HStack(spacing: 8) {
-                        if let planType = snapshot?.planType {
-                            TagBadge(text: planType.uppercased(), tint: .purple)
-                        }
-                        if let email = snapshot?.email {
-                            Text(email)
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+        PanelScaffold(
+            section: .antigravity,
+            updatedAt: snapshot?.generatedAt,
+            badges: snapshot?.planType.map { [PanelBadge(text: $0.uppercased(), tint: .purple)] } ?? [],
+            statusLine: snapshot?.email,
+            agent: agent,
+            errorText: errorText ?? agent.lastError
+        ) {
+            // 自适应网格：窄窗 2×2，宽窗一行 4 张，取代原先挤成 4 窄列的布局。
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 240), spacing: DS.Space.s, alignment: .top)],
+                alignment: .leading,
+                spacing: DS.Space.s
+            ) {
+                ForEach(AntigravityQuotaBucket.allCases, id: \.self) { bucket in
+                    let model = QuotaStatModel(snapshot?.model(for: bucket))
+                    QuotaGaugeCard(
+                        title: bucket.displayName,
+                        model: model,
+                        detailLines: model.absoluteText.map { [$0] } ?? []
+                    )
                 }
-
-                LaunchAgentToggleRow(controller: agent)
-
-                HStack(spacing: Theme.cardSpacing) {
-                    ForEach(AntigravityQuotaBucket.allCases, id: \.self) { bucket in
-                        QuotaStatCard(
-                            title: bucket.displayName,
-                            model: QuotaStatModel(snapshot?.model(for: bucket))
-                        )
-                    }
-                }
-
-                if let message = errorText ?? agent.lastError {
-                    InlineBanner(text: message)
-                }
-
-                FootnoteRow(text: "需要本机 Antigravity 正在运行")
             }
-            .padding(Theme.contentPadding)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            FootnoteRow(text: "需要本机 Antigravity 正在运行")
         }
         .navigationTitle("Antigravity 额度")
         .navigationSubtitle(snapshot.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
