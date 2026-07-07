@@ -21,14 +21,41 @@ struct OverviewPanelView: View {
     @State private var isRefreshing = false
 
     var body: some View {
-        PanelScaffold(section: .overview) {
-            DSSectionHeader("额度监控")
+        // 总览不走 PanelScaffold：省掉大头部与区块标题，目标是默认窗口下
+        // 五张 provider 卡 + 今日消耗条一屏放下、无需滚动。
+        ScrollView {
+            VStack(alignment: .leading, spacing: DS.Space.s) {
+                providerGrid
+                usageTodayStrip
+            }
+            .padding(DS.Space.m)
+            .frame(maxWidth: 1024, alignment: .topLeading)
+            .frame(maxWidth: .infinity)
+            .textSelection(.enabled)
+        }
+        .navigationTitle("总览")
+        .navigationSubtitle("所有数据源一览")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                RefreshButton(
+                    isRefreshing: isRefreshing,
+                    helpText: "刷新全部数据源"
+                ) { await refreshAll() }
+            }
+        }
+        .onAppear(perform: loadAll)
+    }
 
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 300), spacing: DS.Space.s, alignment: .top)],
-                alignment: .leading,
-                spacing: DS.Space.s
-            ) {
+    private var providerGrid: some View {
+        LazyVGrid(
+            columns: [
+                GridItem(.flexible(), spacing: DS.Space.s, alignment: .top),
+                GridItem(.flexible(), spacing: DS.Space.s, alignment: .top),
+                GridItem(.flexible(), spacing: DS.Space.s, alignment: .top),
+            ],
+            alignment: .leading,
+            spacing: DS.Space.s
+        ) {
                 ProviderOverviewCard(
                     section: .codex,
                     plan: codex?.planType?.uppercased(),
@@ -69,59 +96,44 @@ struct OverviewPanelView: View {
                     warning: sub2api?.error ?? sub2apiPrimaryReport?.error,
                     onTap: { onNavigate(.sub2api) }
                 )
-            }
-
-            DSSectionHeader("用量统计")
-
-            usageTodayCard
         }
-        .navigationTitle("总览")
-        .navigationSubtitle("所有数据源一览")
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                RefreshButton(
-                    isRefreshing: isRefreshing,
-                    helpText: "刷新全部数据源"
-                ) { await refreshAll() }
-            }
-        }
-        .onAppear(perform: loadAll)
     }
 
-    // MARK: - 今日消耗
+    // MARK: - 今日消耗（横条）
 
-    private var usageTodayCard: some View {
+    private var usageTodayStrip: some View {
         Button {
             onNavigate(.usage)
         } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s) {
+            VStack(alignment: .leading, spacing: DS.Space.xs) {
                 DSSectionHeader(
                     "今日消耗",
                     subtitle: usage.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新"
                 )
 
                 HStack(alignment: .center, spacing: DS.Space.l) {
-                    VStack(alignment: .leading, spacing: DS.Space.xxs) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(dsCost(usage?.daily.totalCost))
-                            .font(DS.Typo.metricXL)
+                            .font(DS.Typo.metricL)
                             .monospacedDigit()
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
                         Text("\(dsCompactNumber(usage?.daily.totalTokens)) tokens")
-                            .font(.caption)
+                            .font(.callout)
                             .foregroundStyle(.secondary)
                     }
+
+                    KPIInline(label: "本周", value: dsCost(usage?.weekly.totalCost))
+                        .frame(maxWidth: 110)
+                    KPIInline(label: "本月", value: dsCost(usage?.monthly.totalCost))
+                        .frame(maxWidth: 110)
+                    KPIInline(label: "总计", value: dsCost(usage?.total.totalCost))
+                        .frame(maxWidth: 110)
 
                     Spacer(minLength: 0)
 
                     SparklineChart(values: weekCostValues, tint: .blue)
-                        .frame(width: 180)
-                }
-
-                HStack(spacing: DS.Space.s) {
-                    KPIInline(label: "本周", value: dsCost(usage?.weekly.totalCost))
-                    KPIInline(label: "本月", value: dsCost(usage?.monthly.totalCost))
-                    KPIInline(label: "总计", value: dsCost(usage?.total.totalCost))
+                        .frame(width: 160)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

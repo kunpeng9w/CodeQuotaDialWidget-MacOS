@@ -8,8 +8,9 @@ struct OverviewWindowItem: Identifiable {
     var id: String { title }
 }
 
-/// 总览页的 provider 状态卡：主表盘显示最紧张窗口，子行列出各窗口，
-/// 整卡可点击跳转到对应面板。无快照时降级为虚线环 + 「去查看」。
+/// 总览页的 provider 状态卡（紧凑版，目标是总览一屏放下）：
+/// 单行头部（图标·名称·套餐·更新时间/过期警示）+ 中环表盘 + 窗口子行，
+/// 整卡可点击跳转对应面板。无快照时降级为虚线环 + 「去查看」。
 struct ProviderOverviewCard: View {
     let section: DashboardSection
     var plan: String?
@@ -22,33 +23,36 @@ struct ProviderOverviewCard: View {
         OverviewSummaryLogic.primaryRemainingPercent(windows.map(\.remainingPercent))
     }
 
+    private var isStale: Bool { OverviewSummaryLogic.isStale(generatedAt: updatedAt) }
+
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: DS.Space.s) {
+            VStack(alignment: .leading, spacing: DS.Space.xs) {
                 headerRow
 
-                HStack(spacing: DS.Space.m) {
-                    QuotaRingGauge(remainingPercent: primary, size: .large)
+                HStack(spacing: DS.Space.s) {
+                    QuotaRingGauge(remainingPercent: primary, size: .medium)
 
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 3) {
                         if windows.isEmpty {
                             Text("暂无快照 / 未配置")
-                                .font(.subheadline)
+                                .font(.callout)
                                 .foregroundStyle(.secondary)
                             Label("去查看", systemImage: "arrow.right")
-                                .font(.subheadline.weight(.medium))
+                                .font(.callout.weight(.medium))
                                 .foregroundStyle(Color.accentColor)
                                 .labelStyle(.titleAndIcon)
                         } else {
                             ForEach(windows) { window in
                                 HStack(spacing: DS.Space.xs) {
                                     Text(window.title)
-                                        .font(.subheadline)
+                                        .font(.callout)
                                         .foregroundStyle(.secondary)
                                         .lineLimit(1)
-                                    Spacer(minLength: DS.Space.xs)
+                                        .minimumScaleFactor(0.8)
+                                    Spacer(minLength: DS.Space.xxs)
                                     Text(window.remainingPercent.map { "\($0)%" } ?? "--")
-                                        .font(.subheadline.weight(.semibold))
+                                        .font(.callout.weight(.semibold))
                                         .monospacedDigit()
                                         .foregroundStyle(
                                             QuotaTone.from(remainingPercent: window.remainingPercent).color
@@ -57,14 +61,8 @@ struct ProviderOverviewCard: View {
                             }
                         }
                     }
-                    .frame(maxWidth: 170, alignment: .leading)
-
-                    Spacer(minLength: 0)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-
-                Text(updatedAt.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0))" } ?? "未刷新")
-                    .font(DS.Typo.meta)
-                    .foregroundStyle(.tertiary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
@@ -80,23 +78,26 @@ struct ProviderOverviewCard: View {
                 Image(asset)
                     .resizable()
                     .interpolation(.high)
-                    .frame(width: 20, height: 20)
+                    .frame(width: 18, height: 18)
                     .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
             } else {
                 Image(systemName: section.systemImage)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(section.accent)
-                    .frame(width: 20, height: 20)
+                    .frame(width: 18, height: 18)
             }
 
             Text(section.title)
                 .font(.body.weight(.semibold))
+                .lineLimit(1)
 
             if let plan {
                 TagBadge(text: plan, tint: section.accent)
+                    .lineLimit(1)
+                    .layoutPriority(-1)
             }
 
-            Spacer(minLength: 0)
+            Spacer(minLength: DS.Space.xxs)
 
             if let warning {
                 Image(systemName: "exclamationmark.triangle.fill")
@@ -105,9 +106,17 @@ struct ProviderOverviewCard: View {
                     .help(warning)
             }
 
-            if OverviewSummaryLogic.isStale(generatedAt: updatedAt) {
-                TagBadge(text: "可能过期", tint: .orange, muted: true)
-            }
+            Text(updatedAtText)
+                .font(.footnote)
+                .foregroundStyle(isStale ? AnyShapeStyle(Color.orange) : AnyShapeStyle(.tertiary))
+                .lineLimit(1)
+                .help(isStale ? "超过 30 分钟未更新，数据可能过期" : "")
         }
+    }
+
+    private var updatedAtText: String {
+        guard let updatedAt else { return "未刷新" }
+        let time = quotaPanelTimeFormatter.string(from: updatedAt)
+        return isStale ? "⚠︎ \(time)" : time
     }
 }

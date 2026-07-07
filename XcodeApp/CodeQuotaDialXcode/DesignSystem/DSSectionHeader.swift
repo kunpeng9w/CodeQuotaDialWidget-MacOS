@@ -24,7 +24,7 @@ struct DSSectionHeader<Trailing: View>: View {
                 .foregroundStyle(.secondary)
             if let subtitle {
                 Text(subtitle)
-                    .font(DS.Typo.meta)
+                    .font(.callout)
                     .foregroundStyle(.tertiary)
             }
             Spacer(minLength: 0)

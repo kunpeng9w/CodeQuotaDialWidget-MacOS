@@ -15,19 +15,19 @@ struct QuotaGaugeCard: View {
 
             VStack(alignment: .leading, spacing: DS.Space.xxs) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
 
                 if let used = model?.usedPercent {
                     Text("已用 \(used)%")
-                        .font(.subheadline)
+                        .font(.body)
                         .foregroundStyle(.secondary)
                 }
 
                 ForEach(detailLines, id: \.self) { line in
                     Text(line)
-                        .font(.footnote)
+                        .font(.callout)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -39,7 +39,7 @@ struct QuotaGaugeCard: View {
                         Text(model?.resetsAt.map { dsResetFormatter.string(from: $0) } ?? "--")
                             .monospacedDigit()
                     }
-                    .font(.footnote)
+                    .font(.callout)
                     .foregroundStyle(.tertiary)
                 }
             }

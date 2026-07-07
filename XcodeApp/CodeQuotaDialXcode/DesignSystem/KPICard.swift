@@ -23,7 +23,7 @@ struct KPICard: View {
                 .minimumScaleFactor(0.7)
             if let secondary {
                 Text(secondary)
-                    .font(DS.Typo.meta)
+                    .font(.callout)
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
@@ -42,11 +42,11 @@ struct KPIInline: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
-                .font(DS.Typo.meta)
+                .font(.callout)
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
             Text(value)
-                .font(.callout.weight(.semibold))
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)

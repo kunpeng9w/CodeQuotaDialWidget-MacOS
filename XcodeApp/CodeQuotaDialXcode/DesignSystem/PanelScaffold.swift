@@ -68,7 +68,7 @@ struct PanelScaffold<Content: View>: View {
 
                 if let metaLine {
                     Text(metaLine)
-                        .font(DS.Typo.meta)
+                        .font(.callout)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
@@ -128,7 +128,7 @@ struct CompactAgentToggle: View {
                 set: { controller.setRunning($0) }
             )) {
                 Text("后台自动刷新")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
             }
             .toggleStyle(.switch)

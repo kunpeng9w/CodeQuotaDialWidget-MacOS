@@ -32,7 +32,8 @@ enum DS {
         /// 面板头部标题。
         static let panelTitle = Font.title2.weight(.semibold)
         /// 卡片/区块小标签（配 .secondary + uppercase）。
-        static let cardLabel = Font.caption.weight(.semibold)
+        /// macOS 上 caption/footnote 均为 10pt，肉眼偏小，统一用 callout(12pt)。
+        static let cardLabel = Font.callout.weight(.semibold)
         /// 三级脚注。
         static let meta = Font.caption2
     }
