@@ -49,6 +49,8 @@ struct PanelScaffold<Content: View>: View {
         // 封顶内容列宽，超宽窗口的余量变成对称边距（原消耗统计逻辑上移至此）。
         .frame(maxWidth: maxContentWidth, alignment: .topLeading)
         .frame(maxWidth: .infinity)
+        // 面板内的数值/错误信息允许鼠标选中复制。
+        .textSelection(.enabled)
     }
 
     private var header: some View {
