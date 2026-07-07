@@ -10,6 +10,7 @@ struct GLMQuotaPanelView: View {
     @State private var isEditingKey = false
     @State private var apiKeyInput = ""
     @State private var keyStatus: String?
+    @State private var showKeyPopover = false
     @StateObject private var agent = LaunchAgentController(
         label: LaunchAgentLabels.glm.label,
         plistPath: LaunchAgentLabels.glm.plist
@@ -21,15 +22,16 @@ struct GLMQuotaPanelView: View {
             updatedAt: snapshot?.generatedAt,
             badges: snapshot?.level.map { [PanelBadge(text: $0.uppercased(), tint: .blue)] } ?? [],
             agent: agent,
-            errorText: errorText ?? agent.lastError
+            errorText: errorText ?? agent.lastError,
+            headerAccessory: AnyView(apiKeyControl)
         ) {
-            apiKeyCard
-
             HStack(spacing: DS.Space.s) {
                 gaugeCard(title: "工具类额度", window: snapshot?.timeLimit)
                 gaugeCard(title: "5h", window: snapshot?.tokensLimit5)
                 gaugeCard(title: "本周", window: snapshot?.tokensLimitWeek)
             }
+
+            AgentUsageTrendCard(agentName: "zcode", displayName: "ZCode Agent", tint: .blue)
 
             FootnoteRow(text: "桌面组件每 2 分钟读取快照")
         }
@@ -58,58 +60,69 @@ struct GLMQuotaPanelView: View {
         )
     }
 
-    // MARK: - API Key
+    // MARK: - API Key（头部紧凑控件 + popover 编辑器）
 
-    @ViewBuilder private var apiKeyCard: some View {
-        VStack(alignment: .leading, spacing: DS.Space.xs) {
-            DSSectionHeader("API Key") {
-                if keyIsSet && !isEditingKey {
-                    TagBadge(text: "已设置", tint: .green)
-                }
-            }
-
+    private var apiKeyControl: some View {
+        HStack(spacing: DS.Space.xs) {
             if keyIsSet && !isEditingKey {
-                // Set state: never re-display the stored key; only offer to change it.
-                HStack {
-                    Text("已保存并隐藏")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                    Spacer()
-                    Button("修改") {
-                        apiKeyInput = ""
-                        isEditingKey = true
-                        keyStatus = nil
-                    }
-                    .controlSize(.small)
+                TagBadge(text: "Key 已设置", tint: .green)
+                Button("修改") {
+                    apiKeyInput = ""
+                    isEditingKey = true
+                    keyStatus = nil
+                    showKeyPopover = true
                 }
+                .controlSize(.small)
             } else {
-                // Editing / unset state: visible while typing so it can be verified.
-                TextField("粘贴 GLM API Key", text: $apiKeyInput)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(.caption, design: .monospaced))
-                HStack(spacing: 8) {
-                    Button("保存") { saveApiKey() }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
-                        .disabled(apiKeyInput.trimmingCharacters(in: .whitespaces).isEmpty)
-                    if keyIsSet {
-                        Button("取消") {
-                            apiKeyInput = ""
-                            isEditingKey = false
-                            keyStatus = nil
-                        }
-                        .controlSize(.small)
-                    }
-                    Spacer()
-                    if let keyStatus {
-                        Text(keyStatus)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
+                Button("设置 API Key") {
+                    apiKeyInput = ""
+                    isEditingKey = true
+                    keyStatus = nil
+                    showKeyPopover = true
+                }
+                .controlSize(.small)
+            }
+        }
+        .popover(isPresented: $showKeyPopover, arrowEdge: .bottom) {
+            apiKeyEditor
+        }
+    }
+
+    private var apiKeyEditor: some View {
+        VStack(alignment: .leading, spacing: DS.Space.xs) {
+            Text("GLM API Key")
+                .font(DS.Typo.cardLabel)
+                .foregroundStyle(.secondary)
+            // Editing / unset state: visible while typing so it can be verified.
+            TextField("粘贴 GLM API Key", text: $apiKeyInput)
+                .textFieldStyle(.roundedBorder)
+                .font(.system(.caption, design: .monospaced))
+                .frame(width: 280)
+            HStack(spacing: 8) {
+                Button("保存") {
+                    saveApiKey()
+                    // saveApiKey 成功时会退出编辑态（isEditingKey = false）。
+                    if !isEditingKey { showKeyPopover = false }
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .disabled(apiKeyInput.trimmingCharacters(in: .whitespaces).isEmpty)
+                Button("取消") {
+                    apiKeyInput = ""
+                    isEditingKey = false
+                    keyStatus = nil
+                    showKeyPopover = false
+                }
+                .controlSize(.small)
+                Spacer()
+                if let keyStatus {
+                    Text(keyStatus)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
-        .dsCard()
+        .padding(DS.Space.s)
     }
 
     private func saveApiKey() {
