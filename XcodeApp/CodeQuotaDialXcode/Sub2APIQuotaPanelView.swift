@@ -30,72 +30,50 @@ struct Sub2APIQuotaPanelView: View {
     private let refreshTimer = Timer.publish(every: 600, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.spacing) {
-                if let plan = selectedReport?.planName {
-                    HStack(spacing: 8) {
-                        TagBadge(text: plan, tint: .indigo)
-                        if let mode = selectedReport?.mode {
-                            TagBadge(text: mode.uppercased(), tint: .blue, muted: true)
-                        }
-                    }
+        PanelScaffold(
+            section: .sub2api,
+            updatedAt: snapshot?.generatedAt,
+            badges: headerBadges,
+            agent: agent,
+            errorText: errorText ?? agent.lastError,
+            headerAccessory: scopeOptions.count > 1 ? AnyView(scopePicker) : nil
+        ) {
+            accountsCard
+
+            if let report = selectedReport {
+                HStack(spacing: DS.Space.s) {
+                    LimitStatCard(title: "日限额", window: report.daily)
+                    LimitStatCard(title: "周限额", window: report.weekly)
+                    NaturalMonthStatCard(summary: report.naturalMonthSummary())
                 }
 
-                LaunchAgentToggleRow(controller: agent)
-
-                accountsCard
-
-                if scopeOptions.count > 1 {
-                    Picker("范围", selection: $selectedScopeID) {
-                        ForEach(scopeOptions, id: \.id) { option in
-                            Text(option.title).tag(option.id)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(maxWidth: 260, alignment: .leading)
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: DS.Space.s, alignment: .top),
+                        GridItem(.flexible(), spacing: DS.Space.s, alignment: .top)
+                    ],
+                    alignment: .leading,
+                    spacing: 0
+                ) {
+                    TodayCard(report: report)
+                    TrendCard(days: report.days)
                 }
 
-                if let report = selectedReport {
-                    HStack(spacing: Theme.cardSpacing) {
-                        LimitStatCard(title: "日限额", window: report.daily)
-                        LimitStatCard(title: "周限额", window: report.weekly)
-                        NaturalMonthStatCard(summary: report.naturalMonthSummary())
-                    }
+                ModelStatsCard(models: report.models)
 
-                    LazyVGrid(
-                        columns: [
-                            GridItem(.flexible(), spacing: Theme.cardSpacing, alignment: .top),
-                            GridItem(.flexible(), spacing: Theme.cardSpacing, alignment: .top)
-                        ],
-                        alignment: .leading,
-                        spacing: 0
-                    ) {
-                        TodayCard(report: report)
-                        TrendCard(days: report.days)
-                    }
-
-                    ModelStatsCard(models: report.models)
-
-                    if let expiresAt = report.expiresAt {
-                        FootnoteRow(
-                            text: "套餐到期：\(sub2apiExpiryFormatter.string(from: expiresAt))",
-                            systemImage: "calendar.badge.clock"
-                        )
-                    }
+                if let expiresAt = report.expiresAt {
+                    FootnoteRow(
+                        text: "套餐到期：\(sub2apiExpiryFormatter.string(from: expiresAt))",
+                        systemImage: "calendar.badge.clock"
+                    )
                 }
-
-                ForEach(failedAccounts, id: \.id) { account in
-                    InlineBanner(text: "\(account.name)：\(account.error ?? "刷新失败")")
-                }
-
-                if let message = errorText ?? agent.lastError {
-                    InlineBanner(text: message)
-                }
-
-                FootnoteRow(text: "主数值为实际扣费(actual_cost)，与限额同口径；桌面组件每 2 分钟读取快照")
             }
-            .padding(Theme.contentPadding)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            ForEach(failedAccounts, id: \.id) { account in
+                InlineBanner(text: "\(account.name)：\(account.error ?? "刷新失败")")
+            }
+
+            FootnoteRow(text: "主数值为实际扣费(actual_cost)，与限额同口径；自然月总额按 daily_usage 汇总；桌面组件每 2 分钟读取快照")
         }
         .navigationTitle("Sub2API 统计")
         .navigationSubtitle(snapshot.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
@@ -141,15 +119,33 @@ struct Sub2APIQuotaPanelView: View {
         return snapshot.accounts.first { $0.id == selectedScopeID } ?? snapshot.overview
     }
 
+    private var headerBadges: [PanelBadge] {
+        var badges: [PanelBadge] = []
+        if let plan = selectedReport?.planName {
+            badges.append(PanelBadge(text: plan, tint: .indigo))
+        }
+        if let mode = selectedReport?.mode {
+            badges.append(PanelBadge(text: mode.uppercased(), tint: .blue, muted: true))
+        }
+        return badges
+    }
+
+    private var scopePicker: some View {
+        Picker("范围", selection: $selectedScopeID) {
+            ForEach(scopeOptions, id: \.id) { option in
+                Text(option.title).tag(option.id)
+            }
+        }
+        .pickerStyle(.menu)
+        .labelsHidden()
+        .fixedSize()
+    }
+
     // MARK: - Accounts card
 
     private var accountsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("账号")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
+            DSSectionHeader("账号") {
                 if !isEditingAccount {
                     Button("添加账号") { beginAdd() }
                         .controlSize(.small)
@@ -157,9 +153,13 @@ struct Sub2APIQuotaPanelView: View {
             }
 
             if accounts.isEmpty && !isEditingAccount {
-                Text("尚未配置账号。添加中转站的 Base URL 和 API Key 后即可统计。")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                DSEmptyState(
+                    systemImage: "person.crop.circle.badge.plus",
+                    title: "尚未配置账号",
+                    message: "添加中转站的 Base URL 和 API Key 后即可统计。",
+                    actionTitle: "添加账号",
+                    action: { beginAdd() }
+                )
             }
 
             ForEach(accounts) { account in
@@ -181,7 +181,9 @@ struct Sub2APIQuotaPanelView: View {
                         .controlSize(.small)
                         .disabled(isEditingAccount)
                 }
-                .padding(.vertical, 2)
+                .padding(.vertical, 4)
+                .padding(.horizontal, DS.Space.xs)
+                .dsHoverHighlight()
             }
 
             if isEditingAccount {
@@ -217,7 +219,7 @@ struct Sub2APIQuotaPanelView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .cardSurface()
+        .dsCard()
     }
 
     private func displayName(_ account: Sub2APIAccountEntry) -> String {
@@ -347,48 +349,28 @@ struct Sub2APIQuotaPanelView: View {
 
 // MARK: - Limit cards
 
-/// One of the relay's three spending limits, styled like QuotaStatCard but
-/// with USD amounts instead of a reset time.
+/// One of the relay's spending limits：环形表盘 + USD 明细（无重置时间行）。
 private struct LimitStatCard: View {
     let title: String
     let window: Sub2APILimitWindow?
 
-    private var tone: QuotaTone { QuotaTone.from(remainingPercent: window?.remainingPercent) }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(window.map { "\($0.remainingPercent)%" } ?? "--")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundStyle(tone.color)
-                    .minimumScaleFactor(0.7)
-                    .lineLimit(1)
-                if let window {
-                    Text("已用 \(window.usedPercent)%")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-            }
-
-            ProgressBar(remainingPercent: window?.remainingPercent, tone: tone)
-
-            HStack {
-                Text(window.map { "已用 \(sub2apiCostText($0.usageUSD))" } ?? "--")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(window.map { "剩 \(sub2apiCostText($0.remainingUSD)) / \(sub2apiLimitText($0.limitUSD))" } ?? "")
-                    .foregroundStyle(.primary)
-            }
-            .font(.caption)
-            .lineLimit(1)
-            .minimumScaleFactor(0.75)
-        }
-        .cardSurface()
+        QuotaGaugeCard(
+            title: title,
+            model: QuotaStatModel(
+                remainingPercent: window?.remainingPercent,
+                usedPercent: window?.usedPercent,
+                absoluteText: nil,
+                resetsAt: nil
+            ),
+            detailLines: window.map {
+                [
+                    "已用 \(sub2apiCostText($0.usageUSD))",
+                    "剩 \(sub2apiCostText($0.remainingUSD)) / \(sub2apiLimitText($0.limitUSD))",
+                ]
+            } ?? [],
+            showsReset: false
+        )
     }
 }
 
@@ -396,52 +378,33 @@ private struct NaturalMonthStatCard: View {
     let summary: Sub2APITokenSummary
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: DS.Space.xxs) {
             Text("自然月总额")
-                .font(.caption.weight(.semibold))
+                .font(DS.Typo.cardLabel)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
 
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(sub2apiCostText(summary.actualCost))
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .font(DS.Typo.metricL)
+                    .monospacedDigit()
                     .minimumScaleFactor(0.7)
                     .lineLimit(1)
                 Text("标准 \(sub2apiCostText(summary.cost))")
-                    .font(.caption2)
+                    .font(DS.Typo.meta)
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
             }
 
-            HStack(spacing: 8) {
-                NaturalMonthMetric(label: "请求", value: "\(summary.requests) 次")
-                NaturalMonthMetric(label: "Tokens", value: sub2apiCompactNumber(summary.totalTokens))
+            Spacer(minLength: 0)
+
+            HStack(spacing: DS.Space.xs) {
+                KPIInline(label: "请求", value: "\(summary.requests) 次")
+                KPIInline(label: "Tokens", value: sub2apiCompactNumber(summary.totalTokens))
             }
-
-            Text("按 daily_usage 汇总当前自然月")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
         }
-        .cardSurface()
-    }
-}
-
-private struct NaturalMonthMetric: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 84)
+        .dsCard()
     }
 }
 
@@ -452,34 +415,33 @@ private struct TodayCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("今日")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+            DSSectionHeader("今日")
 
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(sub2apiCostText(report.today.actualCost))
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .font(DS.Typo.metricL)
+                    .monospacedDigit()
                     .minimumScaleFactor(0.7)
                     .lineLimit(1)
                 Text("标准 \(sub2apiCostText(report.today.cost))")
-                    .font(.system(size: 10))
+                    .font(DS.Typo.meta)
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
             }
             Text("\(report.today.requests) 次请求 · \(sub2apiCompactNumber(report.today.totalTokens)) tokens")
-                .font(.system(size: 10))
+                .font(DS.Typo.meta)
                 .foregroundStyle(.secondary)
 
-            HStack(spacing: Theme.cardSpacing) {
-                TokenValue(label: "输入", value: report.today.inputTokens)
-                TokenValue(label: "输出", value: report.today.outputTokens)
-                TokenValue(label: "缓存写", value: report.today.cacheCreationTokens)
-                TokenValue(label: "缓存读", value: report.today.cacheReadTokens)
+            HStack(spacing: DS.Space.s) {
+                KPIInline(label: "输入", value: sub2apiCompactNumber(report.today.inputTokens))
+                KPIInline(label: "输出", value: sub2apiCompactNumber(report.today.outputTokens))
+                KPIInline(label: "缓存写", value: sub2apiCompactNumber(report.today.cacheCreationTokens))
+                KPIInline(label: "缓存读", value: sub2apiCompactNumber(report.today.cacheReadTokens))
             }
 
             Divider()
 
-            HStack(spacing: Theme.cardSpacing) {
+            HStack(spacing: DS.Space.s) {
                 TotalTile(title: "累计消耗", primary: sub2apiCostText(report.total.actualCost), secondary: "标准 \(sub2apiCostText(report.total.cost))")
                 TotalTile(
                     title: "账户余量",
@@ -488,27 +450,8 @@ private struct TodayCard: View {
                 )
             }
         }
-        .cardSurface()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-}
-
-private struct TokenValue: View {
-    var label: String
-    var value: Int
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            Text(sub2apiCompactNumber(value))
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .dsCard()
     }
 }
 
@@ -520,14 +463,16 @@ private struct TotalTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                .font(DS.Typo.meta)
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
             Text(primary)
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .font(DS.Typo.metricM)
+                .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             Text(secondary)
-                .font(.system(size: 10))
+                .font(DS.Typo.meta)
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
         }
@@ -542,92 +487,28 @@ private struct TotalTile: View {
 private struct TrendCard: View {
     var days: [Sub2APIDayUsage]
 
-    private var weekDays: [Sub2APIDayUsage] {
-        let byPeriod = Dictionary(days.map { ($0.period, $0.summary) }, uniquingKeysWith: { a, _ in a })
-        return (0..<7).reversed().compactMap { offset in
-            guard let date = Calendar.current.date(byAdding: .day, value: -offset, to: Date()) else { return nil }
-            let period = sub2apiDayFormatter.string(from: date)
-            return Sub2APIDayUsage(period: period, summary: byPeriod[period] ?? Sub2APITokenSummary())
-        }
+    private var weekDays: [TrendDayValue] {
+        TrendDaysLogic.trailingDays(
+            values: days.map { TrendDayValue(period: $0.period, value: $0.summary.actualCost) }
+        )
+    }
+
+    private var average: Double {
+        TrendDaysLogic.elapsedAverage(weekDays, todayPeriod: dsDayFormatter.string(from: Date()))
     }
 
     var body: some View {
-        let weekDays = weekDays
-        let maxCost = max(weekDays.map(\.summary.actualCost).max() ?? 0, 0.01)
-        let elapsed = weekDays.map(\.summary.actualCost)
-        let average = elapsed.isEmpty ? 0 : elapsed.reduce(0, +) / Double(elapsed.count)
-        let todayPeriod = sub2apiDayFormatter.string(from: Date())
-
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("近 7 天趋势")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text("均值 \(sub2apiCostText(average))")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-
-            VStack(spacing: 5) {
-                // The bar area stretches to whatever height the card gets from
-                // the grid row (the today card is usually taller), so bars are
-                // sized from the measured height instead of a fixed constant.
-                ZStack(alignment: .bottom) {
-                    GeometryReader { geo in
-                        let y = geo.size.height * (1 - CGFloat(average / maxCost))
-                        Path { path in
-                            path.move(to: CGPoint(x: 0, y: y))
-                            path.addLine(to: CGPoint(x: geo.size.width, y: y))
-                        }
-                        .stroke(Color.secondary.opacity(0.4), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                    }
-
-                    HStack(alignment: .bottom, spacing: 8) {
-                        ForEach(weekDays) { day in
-                            GeometryReader { geo in
-                                VStack(spacing: 0) {
-                                    Spacer(minLength: 0)
-                                    RoundedRectangle(cornerRadius: 3)
-                                        .fill(Color.indigo.opacity(0.35 + 0.6 * (day.summary.actualCost / maxCost)))
-                                        .frame(height: max(4, geo.size.height * day.summary.actualCost / maxCost))
-                                        .overlay {
-                                            if day.period == todayPeriod {
-                                                RoundedRectangle(cornerRadius: 3)
-                                                    .strokeBorder(Color.primary.opacity(0.55), lineWidth: 1.5)
-                                            }
-                                        }
-                                }
-                            }
-                        }
-                    }
-                }
-                .frame(minHeight: 88, maxHeight: .infinity)
-
-                HStack(spacing: 8) {
-                    ForEach(weekDays) { day in
-                        VStack(spacing: 1) {
-                            Text(sub2apiWeekdayShort(day.period))
-                                .font(.system(size: 10, weight: day.period == todayPeriod ? .semibold : .regular))
-                                .foregroundStyle(day.period == todayPeriod ? Color.primary : Color.secondary)
-                            Text(sub2apiCostText(day.summary.actualCost))
-                                .font(.system(size: 9))
-                                .foregroundStyle(.tertiary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.6)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                }
-            }
+        VStack(alignment: .leading, spacing: DS.Space.s) {
+            DSSectionHeader("近 7 天趋势", subtitle: "均值 \(sub2apiCostText(average))")
+            DSTrendChart(
+                days: weekDays.map { .init(period: $0.period, value: $0.value) },
+                tint: .indigo,
+                valueLabel: { sub2apiCostText($0) }
+            )
+            Spacer(minLength: 0)
         }
-        .padding(Theme.cardPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .strokeBorder(.quaternary, lineWidth: 1)
-        )
+        .dsCard()
     }
 }
 
@@ -638,15 +519,7 @@ private struct ModelStatsCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("模型明细")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text("累计口径")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
+            DSSectionHeader("模型明细", subtitle: "累计口径")
 
             if models.isEmpty {
                 Text("暂无模型数据")
@@ -679,12 +552,11 @@ private struct ModelStatsCard: View {
                         }
                         .frame(height: 5)
                     }
+                    .dsHoverHighlight()
                 }
             }
         }
-        .padding(Theme.cardPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius))
+        .dsCard()
     }
 }
 

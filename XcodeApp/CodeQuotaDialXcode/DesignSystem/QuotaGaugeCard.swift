@@ -6,6 +6,8 @@ struct QuotaGaugeCard: View {
     let title: String
     let model: QuotaStatModel?
     var detailLines: [String] = []
+    /// 限额类窗口没有重置时间概念时关掉整行。
+    var showsReset = true
 
     var body: some View {
         HStack(spacing: DS.Space.m) {
@@ -31,13 +33,15 @@ struct QuotaGaugeCard: View {
                         .minimumScaleFactor(0.8)
                 }
 
-                HStack(spacing: DS.Space.xxs) {
-                    Image(systemName: "clock.arrow.circlepath")
-                    Text(model?.resetsAt.map { dsResetFormatter.string(from: $0) } ?? "--")
-                        .monospacedDigit()
+                if showsReset {
+                    HStack(spacing: DS.Space.xxs) {
+                        Image(systemName: "clock.arrow.circlepath")
+                        Text(model?.resetsAt.map { dsResetFormatter.string(from: $0) } ?? "--")
+                            .monospacedDigit()
+                    }
+                    .font(DS.Typo.meta)
+                    .foregroundStyle(.tertiary)
                 }
-                .font(DS.Typo.meta)
-                .foregroundStyle(.tertiary)
             }
 
             Spacer(minLength: 0)
