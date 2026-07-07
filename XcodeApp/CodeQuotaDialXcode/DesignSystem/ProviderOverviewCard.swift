@@ -30,25 +30,25 @@ struct ProviderOverviewCard: View {
                 HStack(spacing: DS.Space.m) {
                     QuotaRingGauge(remainingPercent: primary, size: .large)
 
-                    VStack(alignment: .leading, spacing: DS.Space.xxs) {
+                    VStack(alignment: .leading, spacing: 6) {
                         if windows.isEmpty {
                             Text("暂无快照 / 未配置")
-                                .font(.caption)
+                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
                             Label("去查看", systemImage: "arrow.right")
-                                .font(.caption.weight(.medium))
+                                .font(.subheadline.weight(.medium))
                                 .foregroundStyle(Color.accentColor)
                                 .labelStyle(.titleAndIcon)
                         } else {
                             ForEach(windows) { window in
                                 HStack(spacing: DS.Space.xs) {
                                     Text(window.title)
-                                        .font(.caption)
+                                        .font(.subheadline)
                                         .foregroundStyle(.secondary)
                                         .lineLimit(1)
                                     Spacer(minLength: DS.Space.xs)
                                     Text(window.remainingPercent.map { "\($0)%" } ?? "--")
-                                        .font(.caption.weight(.semibold))
+                                        .font(.subheadline.weight(.semibold))
                                         .monospacedDigit()
                                         .foregroundStyle(
                                             QuotaTone.from(remainingPercent: window.remainingPercent).color
@@ -57,7 +57,7 @@ struct ProviderOverviewCard: View {
                             }
                         }
                     }
-                    .frame(maxWidth: 150, alignment: .leading)
+                    .frame(maxWidth: 170, alignment: .leading)
 
                     Spacer(minLength: 0)
                 }
@@ -90,7 +90,7 @@ struct ProviderOverviewCard: View {
             }
 
             Text(section.title)
-                .font(.callout.weight(.semibold))
+                .font(.body.weight(.semibold))
 
             if let plan {
                 TagBadge(text: plan, tint: section.accent)

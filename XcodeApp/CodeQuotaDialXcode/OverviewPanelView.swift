@@ -73,14 +73,7 @@ struct OverviewPanelView: View {
 
             DSSectionHeader("用量统计")
 
-            HStack(alignment: .top, spacing: DS.Space.s) {
-                usageTodayCard
-
-                if let report = sub2apiPrimaryReport {
-                    sub2apiTodayCard(report)
-                        .frame(maxWidth: 300)
-                }
-            }
+            usageTodayCard
         }
         .navigationTitle("总览")
         .navigationSubtitle("所有数据源一览")
@@ -137,38 +130,6 @@ struct OverviewPanelView: View {
         .buttonStyle(.plain)
         .dsCard()
         .dsHoverOutline(tint: DashboardSection.usage.accent)
-    }
-
-    private func sub2apiTodayCard(_ report: Sub2APIAccountReport) -> some View {
-        Button {
-            onNavigate(.sub2api)
-        } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s) {
-                DSSectionHeader("Sub2API 今日")
-
-                HStack(spacing: DS.Space.s) {
-                    QuotaRingGauge(remainingPercent: report.daily?.remainingPercent, size: .medium)
-
-                    VStack(alignment: .leading, spacing: DS.Space.xxs) {
-                        Text(dsCost(report.today.actualCost))
-                            .font(DS.Typo.metricM)
-                            .monospacedDigit()
-                        if let daily = report.daily {
-                            Text("日限额已用 \(dsCost(daily.usageUSD)) / \(dsLimitCost(daily.limitUSD))")
-                                .font(DS.Typo.meta)
-                                .foregroundStyle(.tertiary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .dsCard()
-        .dsHoverOutline(tint: DashboardSection.sub2api.accent)
     }
 
     private var weekCostValues: [Double] {
