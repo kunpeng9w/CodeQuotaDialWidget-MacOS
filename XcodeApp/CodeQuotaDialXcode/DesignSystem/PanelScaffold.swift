@@ -21,24 +21,34 @@ struct PanelScaffold<Content: View>: View {
     /// 头部尾随的附加控件（如范围 Picker），排在后台开关之前。
     var headerAccessory: AnyView?
     var maxContentWidth: CGFloat = 1024
+    /// 自带内部滚动的面板（如模型价格的表格）关掉外层 ScrollView，
+    /// 让内容用满剩余高度。
+    var scrollable = true
     @ViewBuilder var content: () -> Content
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: DS.Space.m) {
-                header
-
-                if let errorText {
-                    InlineBanner(text: errorText)
-                }
-
-                content()
-            }
-            .padding(DS.Space.xl)
-            // 封顶内容列宽，超宽窗口的余量变成对称边距（原消耗统计逻辑上移至此）。
-            .frame(maxWidth: maxContentWidth, alignment: .topLeading)
-            .frame(maxWidth: .infinity)
+        if scrollable {
+            ScrollView { inner }
+        } else {
+            inner
+                .frame(maxHeight: .infinity, alignment: .top)
         }
+    }
+
+    private var inner: some View {
+        VStack(alignment: .leading, spacing: DS.Space.m) {
+            header
+
+            if let errorText {
+                InlineBanner(text: errorText)
+            }
+
+            content()
+        }
+        .padding(DS.Space.xl)
+        // 封顶内容列宽，超宽窗口的余量变成对称边距（原消耗统计逻辑上移至此）。
+        .frame(maxWidth: maxContentWidth, alignment: .topLeading)
+        .frame(maxWidth: .infinity)
     }
 
     private var header: some View {

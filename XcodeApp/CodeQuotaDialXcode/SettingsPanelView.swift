@@ -13,85 +13,62 @@ struct SettingsPanelView: View {
     @State private var isError = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.spacing) {
-                proxyCard
-                remoteCard
-                zcodeCard
-
-                HStack(spacing: 10) {
-                    Button("保存") { save() }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(!isDirty)
-                    Button("还原") { load() }
-                        .disabled(!isDirty)
-                    Spacer(minLength: 0)
-                    if let statusText {
-                        Text(statusText)
-                            .font(.caption)
-                            .foregroundStyle(isError ? .orange : .secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                }
-
-                FootnoteRow(text: "保存后在对应面板点“刷新”，或等待后台自动刷新即可生效，无需重新安装。")
+        Form {
+            Section {
+                TextField("http://127.0.0.1:7897", text: $proxyURL)
+                    .font(.system(.body, design: .monospaced))
+            } header: {
+                Label("网络代理", systemImage: "network")
+            } footer: {
+                Text("供 Codex / Claude / GLM 拉取额度时使用。留空=自动跟随 macOS 系统代理；填写=覆盖系统代理。")
             }
-            .padding(Theme.contentPadding)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            Section {
+                TextEditor(text: $remoteHostsText)
+                    .font(.system(.body, design: .monospaced))
+                    .frame(minHeight: 72)
+            } header: {
+                Label("远端 SSH 主机", systemImage: "server.rack")
+            } footer: {
+                Text("供“消耗”统计做多端汇总，每行一个 host（需已配置免密登录且远端有 ccusage）。留空=仅本机。")
+            }
+
+            Section {
+                Toggle(isOn: $zcodeUsageEnabled) {
+                    Label("ZCode 用量扩展", systemImage: "bolt.horizontal.circle")
+                }
+            } footer: {
+                Text("开启后读取本机 ~/.zcode/cli/db/db.sqlite，并作为 ZCode Agent 合并到“消耗”统计。")
+            }
         }
+        .formStyle(.grouped)
+        .safeAreaInset(edge: .bottom) { saveBar }
         .navigationTitle("设置")
         .onAppear(perform: load)
     }
 
-    private var proxyCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("网络代理", systemImage: "network")
-                .font(.callout.weight(.semibold))
-            Text("供 Codex / Claude / GLM 拉取额度时使用。留空=自动跟随 macOS 系统代理；填写=覆盖系统代理。")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            TextField("http://127.0.0.1:7897", text: $proxyURL)
-                .textFieldStyle(.roundedBorder)
-                .font(.system(.body, design: .monospaced))
-        }
-        .cardSurface()
-    }
-
-    private var remoteCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("远端 SSH 主机", systemImage: "server.rack")
-                .font(.callout.weight(.semibold))
-            Text("供“消耗”统计做多端汇总，每行一个 host（需已配置免密登录且远端有 ccusage）。留空=仅本机。")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            TextEditor(text: $remoteHostsText)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 72)
-                .padding(4)
-                .scrollContentBackground(.hidden)
-                .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .strokeBorder(Color.secondary.opacity(0.25))
-                )
-        }
-        .cardSurface()
-    }
-
-    private var zcodeCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Toggle(isOn: $zcodeUsageEnabled) {
-                Label("ZCode 用量扩展", systemImage: "bolt.horizontal.circle")
-                    .font(.callout.weight(.semibold))
+    private var saveBar: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 10) {
+                Button("保存") { save() }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!isDirty)
+                Button("还原") { load() }
+                    .disabled(!isDirty)
+                Spacer(minLength: 0)
+                if let statusText {
+                    Text(statusText)
+                        .font(.caption)
+                        .foregroundStyle(isError ? .orange : .secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
             }
-            Text("开启后读取本机 ~/.zcode/cli/db/db.sqlite，并作为 ZCode Agent 合并到“消耗”统计。")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            FootnoteRow(text: "保存后在对应面板点“刷新”，或等待后台自动刷新即可生效，无需重新安装。")
         }
-        .cardSurface()
+        .padding(.horizontal, DS.Space.xl)
+        .padding(.vertical, DS.Space.s)
+        .background(.bar)
     }
 
     private var editedConfig: RuntimeConfig {

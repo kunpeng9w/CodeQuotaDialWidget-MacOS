@@ -33,7 +33,12 @@ struct ModelPricesPanelView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.spacing) {
+        PanelScaffold(
+            section: .modelPrices,
+            updatedAt: snapshot?.generatedAt,
+            errorText: errorText,
+            scrollable: false
+        ) {
             if !records.isEmpty {
                 summaryHeader
                 pricingSourceTimestamps
@@ -45,12 +50,7 @@ struct ModelPricesPanelView: View {
             } else {
                 emptyState
             }
-
-            if let errorText {
-                InlineBanner(text: errorText)
-            }
         }
-        .padding(Theme.contentPadding)
         .navigationTitle("模型价格")
         .navigationSubtitle(snapshot.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
         .toolbar {
@@ -72,28 +72,11 @@ struct ModelPricesPanelView: View {
     // MARK: - 顶部汇总
 
     private var summaryHeader: some View {
-        HStack(spacing: 14) {
-            summaryStat(value: "\(records.count)", label: "模型", tint: .blue)
-            summaryStat(value: ModelPricesFormat.compactNumber(totalTokens), label: "总 Tokens", tint: .purple)
-            summaryStat(value: ModelPricesFormat.cost(totalCost), label: "总花费", tint: .green)
-            Spacer(minLength: 0)
+        HStack(spacing: DS.Space.s) {
+            KPICard(label: "模型", value: "\(records.count)", tint: .blue)
+            KPICard(label: "总 Tokens", value: ModelPricesFormat.compactNumber(totalTokens), tint: .purple)
+            KPICard(label: "总花费", value: ModelPricesFormat.cost(totalCost), tint: .green)
         }
-    }
-
-    private func summaryStat(value: String, label: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(value)
-                .font(.system(.title3, design: .rounded).weight(.bold))
-                .foregroundStyle(tint)
-                .monospacedDigit()
-            Text(label)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 11)
-        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private var pricingSourceTimestamps: some View {
@@ -134,7 +117,7 @@ struct ModelPricesPanelView: View {
             )
         }
         .frame(minHeight: 360)
-        .cardSurface(padded: false)
+        .dsCard(padded: false)
     }
 
     private var tableHeader: some View {
@@ -151,7 +134,7 @@ struct ModelPricesPanelView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(Color.primary.opacity(0.05))
+        .background(.bar)
     }
 
     private func tableRow(_ record: UsageModelPriceRecord, index: Int) -> some View {
@@ -231,15 +214,15 @@ struct ModelPricesPanelView: View {
     // MARK: - 空态
 
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("暂无模型价格")
-                .font(.callout.weight(.semibold))
-            Text("刷新“消耗统计”或本页后，会根据已用过模型生成价格记录。")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .cardSurface()
+        DSEmptyState(
+            systemImage: "tag",
+            title: "暂无模型价格",
+            message: "刷新“消耗统计”或本页后，会根据已用过模型生成价格记录。",
+            actionTitle: "立即刷新",
+            action: { Task { await refresh() } }
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .dsCard()
     }
 
     // MARK: - 数据
