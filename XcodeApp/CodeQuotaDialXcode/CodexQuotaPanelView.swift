@@ -12,33 +12,26 @@ struct CodexQuotaPanelView: View {
     )
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.spacing) {
-                if let plan = snapshot?.planType {
-                    let isFree = snapshot?.isFreePlan ?? false
-                    TagBadge(text: plan.uppercased(), tint: .teal, muted: isFree)
+        PanelScaffold(
+            section: .codex,
+            updatedAt: snapshot?.generatedAt,
+            badges: snapshot?.planType.map {
+                [PanelBadge(text: $0.uppercased(), tint: .teal, muted: snapshot?.isFreePlan ?? false)]
+            } ?? [],
+            agent: agent,
+            errorText: errorText ?? agent.lastError
+        ) {
+            if let monthly = snapshot?.monthly, snapshot?.fiveHour == nil {
+                // 免费版：单个 30 天额度表盘。
+                QuotaGaugeCard(title: "30 天额度", model: QuotaStatModel(monthly))
+            } else {
+                HStack(spacing: DS.Space.s) {
+                    QuotaGaugeCard(title: "5h", model: QuotaStatModel(snapshot?.fiveHour))
+                    QuotaGaugeCard(title: "本周", model: QuotaStatModel(snapshot?.weekly))
                 }
-
-                LaunchAgentToggleRow(controller: agent)
-
-                if let monthly = snapshot?.monthly, snapshot?.fiveHour == nil {
-                    // 免费版：单个 30 天额度表盘。
-                    QuotaStatCard(title: "30 天额度", model: QuotaStatModel(monthly))
-                } else {
-                    HStack(spacing: Theme.cardSpacing) {
-                        QuotaStatCard(title: "5h", model: QuotaStatModel(snapshot?.fiveHour))
-                        QuotaStatCard(title: "本周", model: QuotaStatModel(snapshot?.weekly))
-                    }
-                }
-
-                if let message = errorText ?? agent.lastError {
-                    InlineBanner(text: message)
-                }
-
-                FootnoteRow(text: "桌面组件每 2 分钟读取快照")
             }
-            .padding(Theme.contentPadding)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            FootnoteRow(text: "桌面组件每 2 分钟读取快照")
         }
         .navigationTitle("Codex 额度")
         .navigationSubtitle(snapshot.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")

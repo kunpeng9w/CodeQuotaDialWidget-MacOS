@@ -12,27 +12,19 @@ struct ClaudeQuotaPanelView: View {
     )
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.spacing) {
-                if let plan = snapshot?.planType {
-                    TagBadge(text: plan.uppercased(), tint: .orange)
-                }
-
-                LaunchAgentToggleRow(controller: agent)
-
-                HStack(spacing: Theme.cardSpacing) {
-                    QuotaStatCard(title: "5h", model: QuotaStatModel(snapshot?.fiveHour))
-                    QuotaStatCard(title: "本周", model: QuotaStatModel(snapshot?.weekly))
-                }
-
-                if let message = errorText ?? agent.lastError {
-                    InlineBanner(text: message)
-                }
-
-                FootnoteRow(text: "桌面组件每 2 分钟读取快照")
+        PanelScaffold(
+            section: .claude,
+            updatedAt: snapshot?.generatedAt,
+            badges: snapshot?.planType.map { [PanelBadge(text: $0.uppercased(), tint: .orange)] } ?? [],
+            agent: agent,
+            errorText: errorText ?? agent.lastError
+        ) {
+            HStack(spacing: DS.Space.s) {
+                QuotaGaugeCard(title: "5h", model: QuotaStatModel(snapshot?.fiveHour))
+                QuotaGaugeCard(title: "本周", model: QuotaStatModel(snapshot?.weekly))
             }
-            .padding(Theme.contentPadding)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            FootnoteRow(text: "桌面组件每 2 分钟读取快照")
         }
         .navigationTitle("Claude 额度")
         .navigationSubtitle(snapshot.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
