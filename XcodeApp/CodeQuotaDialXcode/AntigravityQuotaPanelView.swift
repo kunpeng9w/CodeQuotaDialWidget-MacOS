@@ -20,9 +20,13 @@ struct AntigravityQuotaPanelView: View {
             agent: agent,
             errorText: errorText ?? agent.lastError
         ) {
-            // 自适应网格：窄窗 2×2，宽窗一行 4 张，取代原先挤成 4 窄列的布局。
+            // 固定两列：2 个 bucket 时与 Claude 面板的对半卡完全同宽，
+            // 4 个 bucket 时 2×2（自适应网格会在宽窗排 3 列导致卡宽不一致）。
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 240), spacing: DS.Space.s, alignment: .top)],
+                columns: [
+                    GridItem(.flexible(), spacing: DS.Space.s, alignment: .top),
+                    GridItem(.flexible(), spacing: DS.Space.s, alignment: .top),
+                ],
                 alignment: .leading,
                 spacing: DS.Space.s
             ) {
