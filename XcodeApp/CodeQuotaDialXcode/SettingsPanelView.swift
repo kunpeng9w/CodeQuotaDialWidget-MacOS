@@ -1,3 +1,4 @@
+import QuotaProcessSupport
 import SwiftUI
 
 /// In-app editor for the runtime settings that used to require a reinstall:
@@ -12,6 +13,7 @@ struct SettingsPanelView: View {
     @State private var statusText: String?
     @State private var isError = false
     @State private var disabledProviders: Set<String> = []
+    @State private var systemProxyText: String?
 
     var body: some View {
         Form {
@@ -40,7 +42,10 @@ struct SettingsPanelView: View {
             } header: {
                 Label("网络代理", systemImage: "network")
             } footer: {
-                Text("供 Codex / Claude / GLM 拉取额度时使用。留空=自动跟随 macOS 系统代理；填写=覆盖系统代理。")
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("供 Codex / Claude / GLM 拉取额度时使用。留空=自动跟随 macOS 系统代理；填写=覆盖系统代理。")
+                    Text(systemProxyText ?? "正在探测当前系统代理…")
+                }
             }
 
             Section {
@@ -80,7 +85,19 @@ struct SettingsPanelView: View {
                     .disabled(!isDirty)
             }
         }
-        .onAppear(perform: load)
+        .onAppear {
+            load()
+            probeSystemProxy()
+        }
+    }
+
+    /// 实时解析当前系统代理（含 PAC，可能有网络等待），结果只做展示。
+    private func probeSystemProxy() {
+        Task.detached(priority: .utility) {
+            let proxy = QuotaProxyResolver.curlProxy(for: "https://api.openai.com", manualOverride: nil)
+            let text = "当前系统代理（以 api.openai.com 为例）：\(proxy ?? "直连")"
+            await MainActor.run { systemProxyText = text }
+        }
     }
 
     private var editedConfig: RuntimeConfig {
