@@ -66,6 +66,7 @@ struct UsagePanelView: View {
         .onReceive(refreshTimer) { _ in
             Task { await refresh() }
         }
+        .onReceive(snapshotReloadTimer) { _ in loadSnapshot() }
         .onChange(of: selectedScopeID) { _, _ in
             detailSelection = .today
             displayedMonth = .now

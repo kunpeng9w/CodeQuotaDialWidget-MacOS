@@ -67,6 +67,7 @@ struct ModelPricesPanelView: View {
                 Task { await refresh() }
             }
         }
+        .onReceive(snapshotReloadTimer) { _ in loadSnapshot() }
     }
 
     // MARK: - 顶部汇总

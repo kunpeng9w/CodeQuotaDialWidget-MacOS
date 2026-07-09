@@ -93,6 +93,7 @@ struct Sub2APIQuotaPanelView: View {
         .onReceive(refreshTimer) { _ in
             Task { await refresh() }
         }
+        .onReceive(snapshotReloadTimer) { _ in loadSnapshot() }
     }
 
     // MARK: - Scopes

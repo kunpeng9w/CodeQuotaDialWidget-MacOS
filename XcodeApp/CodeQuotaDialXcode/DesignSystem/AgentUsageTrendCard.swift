@@ -16,6 +16,7 @@ struct AgentUsageTrendCard: View {
     var body: some View {
         content
             .onAppear(perform: load)
+            .onReceive(snapshotReloadTimer) { _ in load() }
     }
 
     @ViewBuilder private var content: some View {

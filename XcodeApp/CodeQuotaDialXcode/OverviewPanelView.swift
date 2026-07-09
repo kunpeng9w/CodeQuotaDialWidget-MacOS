@@ -46,6 +46,7 @@ struct OverviewPanelView: View {
             }
         }
         .onAppear(perform: loadAll)
+        .onReceive(snapshotReloadTimer) { _ in loadAll() }
         .onReceive(NotificationCenter.default.publisher(for: .runtimeConfigDidChange)) { _ in
             disabledProviders = Set(RuntimeConfigStore.load().disabledProviders)
         }

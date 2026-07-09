@@ -47,6 +47,7 @@ struct GLMQuotaPanelView: View {
             agent.refreshStatus()
             keyIsSet = GLMConfig.resolvedApiKey() != nil
         }
+        .onReceive(snapshotReloadTimer) { _ in loadSnapshot() }
     }
 
     // MARK: - 表盘卡

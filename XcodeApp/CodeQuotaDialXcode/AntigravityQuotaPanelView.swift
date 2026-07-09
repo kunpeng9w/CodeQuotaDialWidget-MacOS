@@ -53,6 +53,7 @@ struct AntigravityQuotaPanelView: View {
             loadSnapshot()
             agent.refreshStatus()
         }
+        .onReceive(snapshotReloadTimer) { _ in loadSnapshot() }
     }
 
     private func loadSnapshot() {
