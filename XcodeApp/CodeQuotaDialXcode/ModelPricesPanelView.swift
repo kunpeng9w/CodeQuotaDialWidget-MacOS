@@ -67,7 +67,9 @@ struct ModelPricesPanelView: View {
                 Task { await refresh() }
             }
         }
-        .onReceive(snapshotReloadTimer) { _ in loadSnapshot() }
+        .onReceive(snapshotReloadTimer) { _ in
+            loadSnapshot(preservingCurrentError: true)
+        }
     }
 
     // MARK: - 顶部汇总
@@ -228,12 +230,22 @@ struct ModelPricesPanelView: View {
 
     // MARK: - 数据
 
-    private func loadSnapshot() {
+    private func loadSnapshot(preservingCurrentError: Bool = false) {
+        let previousGeneratedAt = snapshot?.generatedAt
         do {
-            snapshot = try UsageSnapshotStore().load()
-            errorText = snapshot?.error
+            let reloadedSnapshot = try UsageSnapshotStore().load()
+            snapshot = reloadedSnapshot
+            errorText = SnapshotReloadErrorLogic.resolvedErrorText(
+                currentError: errorText,
+                reloadedError: reloadedSnapshot.error,
+                previousGeneratedAt: previousGeneratedAt,
+                reloadedGeneratedAt: reloadedSnapshot.generatedAt,
+                preserveCurrentWhenUnchanged: preservingCurrentError
+            )
         } catch {
-            errorText = "暂无消耗快照。"
+            if !preservingCurrentError {
+                errorText = "暂无消耗快照。"
+            }
         }
     }
 

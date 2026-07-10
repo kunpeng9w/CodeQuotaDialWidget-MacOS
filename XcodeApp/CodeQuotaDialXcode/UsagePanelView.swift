@@ -66,7 +66,9 @@ struct UsagePanelView: View {
         .onReceive(refreshTimer) { _ in
             Task { await refresh() }
         }
-        .onReceive(snapshotReloadTimer) { _ in loadSnapshot() }
+        .onReceive(snapshotReloadTimer) { _ in
+            loadSnapshot(preservingCurrentError: true)
+        }
         .onChange(of: selectedScopeID) { _, _ in
             detailSelection = .today
             displayedMonth = .now
@@ -170,13 +172,23 @@ struct UsagePanelView: View {
         return scopes.first
     }
 
-    private func loadSnapshot() {
+    private func loadSnapshot(preservingCurrentError: Bool = false) {
+        let previousGeneratedAt = snapshot?.generatedAt
         do {
-            snapshot = try UsageSnapshotStore().load()
-            errorText = snapshot?.error
+            let reloadedSnapshot = try UsageSnapshotStore().load()
+            snapshot = reloadedSnapshot
+            errorText = SnapshotReloadErrorLogic.resolvedErrorText(
+                currentError: errorText,
+                reloadedError: reloadedSnapshot.error,
+                previousGeneratedAt: previousGeneratedAt,
+                reloadedGeneratedAt: reloadedSnapshot.generatedAt,
+                preserveCurrentWhenUnchanged: preservingCurrentError
+            )
             normalizeSelectedScope()
         } catch {
-            errorText = "暂无消耗快照。"
+            if !preservingCurrentError {
+                errorText = "暂无消耗快照。"
+            }
         }
         loadRangeShortcuts()
     }

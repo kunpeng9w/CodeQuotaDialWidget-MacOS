@@ -47,7 +47,9 @@ struct GLMQuotaPanelView: View {
             agent.refreshStatus()
             keyIsSet = GLMConfig.resolvedApiKey() != nil
         }
-        .onReceive(snapshotReloadTimer) { _ in loadSnapshot() }
+        .onReceive(snapshotReloadTimer) { _ in
+            loadSnapshot(preservingCurrentError: true)
+        }
     }
 
     // MARK: - 表盘卡
@@ -143,10 +145,17 @@ struct GLMQuotaPanelView: View {
         }
     }
 
-    private func loadSnapshot() {
+    private func loadSnapshot(preservingCurrentError: Bool = false) {
+        let previousGeneratedAt = snapshot?.generatedAt
         let state = loadQuotaPanelSnapshot(from: GLMQuotaSnapshotStore())
         snapshot = state.snapshot
-        errorText = state.errorText
+        errorText = SnapshotReloadErrorLogic.resolvedErrorText(
+            currentError: errorText,
+            reloadedError: state.errorText,
+            previousGeneratedAt: previousGeneratedAt,
+            reloadedGeneratedAt: state.snapshot?.generatedAt,
+            preserveCurrentWhenUnchanged: preservingCurrentError
+        )
     }
 
     private func refresh() async {

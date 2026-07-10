@@ -46,13 +46,22 @@ struct CodexQuotaPanelView: View {
             loadSnapshot()
             agent.refreshStatus()
         }
-        .onReceive(snapshotReloadTimer) { _ in loadSnapshot() }
+        .onReceive(snapshotReloadTimer) { _ in
+            loadSnapshot(preservingCurrentError: true)
+        }
     }
 
-    private func loadSnapshot() {
+    private func loadSnapshot(preservingCurrentError: Bool = false) {
+        let previousGeneratedAt = snapshot?.generatedAt
         let state = loadQuotaPanelSnapshot(from: CodexQuotaSnapshotStore())
         snapshot = state.snapshot
-        errorText = state.errorText
+        errorText = SnapshotReloadErrorLogic.resolvedErrorText(
+            currentError: errorText,
+            reloadedError: state.errorText,
+            previousGeneratedAt: previousGeneratedAt,
+            reloadedGeneratedAt: state.snapshot?.generatedAt,
+            preserveCurrentWhenUnchanged: preservingCurrentError
+        )
     }
 
     private func refresh() async {

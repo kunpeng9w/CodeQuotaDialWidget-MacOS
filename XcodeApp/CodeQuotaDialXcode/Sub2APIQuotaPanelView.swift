@@ -93,7 +93,9 @@ struct Sub2APIQuotaPanelView: View {
         .onReceive(refreshTimer) { _ in
             Task { await refresh() }
         }
-        .onReceive(snapshotReloadTimer) { _ in loadSnapshot() }
+        .onReceive(snapshotReloadTimer) { _ in
+            loadSnapshot(preservingCurrentError: true)
+        }
     }
 
     // MARK: - Scopes
@@ -317,10 +319,17 @@ struct Sub2APIQuotaPanelView: View {
 
     // MARK: - Snapshot
 
-    private func loadSnapshot() {
+    private func loadSnapshot(preservingCurrentError: Bool = false) {
+        let previousGeneratedAt = snapshot?.generatedAt
         let state = loadQuotaPanelSnapshot(from: Sub2APIQuotaSnapshotStore())
         snapshot = state.snapshot
-        errorText = state.errorText
+        errorText = SnapshotReloadErrorLogic.resolvedErrorText(
+            currentError: errorText,
+            reloadedError: state.errorText,
+            previousGeneratedAt: previousGeneratedAt,
+            reloadedGeneratedAt: state.snapshot?.generatedAt,
+            preserveCurrentWhenUnchanged: preservingCurrentError
+        )
         normalizeSelectedScope()
     }
 
