@@ -36,7 +36,6 @@ struct GLMQuotaPanelView: View {
             FootnoteRow(text: "桌面组件每 2 分钟读取快照")
         }
         .navigationTitle("GLM 额度")
-        .navigationSubtitle(snapshot.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 RefreshButton(isRefreshing: isRefreshing) { await refresh() }

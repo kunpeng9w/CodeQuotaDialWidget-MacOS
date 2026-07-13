@@ -52,7 +52,6 @@ struct ModelPricesPanelView: View {
             }
         }
         .navigationTitle("模型价格")
-        .navigationSubtitle(snapshot.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 RefreshButton(

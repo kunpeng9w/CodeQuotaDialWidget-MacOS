@@ -49,7 +49,6 @@ struct UsagePanelView: View {
             ModelBreakdownCard(breakdowns: selectedScope?.breakdowns ?? [])
         }
         .navigationTitle("消耗统计")
-        .navigationSubtitle(snapshot.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 RefreshButton(isRefreshing: isRefreshing) { await refresh() }

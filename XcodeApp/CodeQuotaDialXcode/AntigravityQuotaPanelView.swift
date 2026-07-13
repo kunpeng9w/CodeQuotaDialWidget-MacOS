@@ -43,7 +43,6 @@ struct AntigravityQuotaPanelView: View {
             FootnoteRow(text: "需要本机 Antigravity 正在运行")
         }
         .navigationTitle("Antigravity 额度")
-        .navigationSubtitle(snapshot.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 RefreshButton(isRefreshing: isRefreshing) { await refresh() }

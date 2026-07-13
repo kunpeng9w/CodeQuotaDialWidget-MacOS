@@ -67,7 +67,7 @@ func refreshQuotaPanelSnapshot<Store: QuotaPanelSnapshotStoring>(
 let quotaPanelTimeFormatter: DateFormatter = {
     let formatter = DateFormatter()
     formatter.locale = Locale(identifier: "zh_CN")
-    formatter.dateFormat = "HH:mm"
+    formatter.dateFormat = "MM-dd HH:mm"
     return formatter
 }()
 

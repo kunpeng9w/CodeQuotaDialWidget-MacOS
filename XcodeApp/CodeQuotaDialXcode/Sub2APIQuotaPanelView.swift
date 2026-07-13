@@ -76,7 +76,6 @@ struct Sub2APIQuotaPanelView: View {
             FootnoteRow(text: "主数值为实际扣费(actual_cost)，与限额同口径；自然月总额按 daily_usage 汇总；桌面组件每 2 分钟读取快照")
         }
         .navigationTitle("Sub2API 统计")
-        .navigationSubtitle(snapshot.map { "更新于 \(quotaPanelTimeFormatter.string(from: $0.generatedAt))" } ?? "未刷新")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 RefreshButton(isRefreshing: isRefreshing) { await refresh() }
