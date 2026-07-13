@@ -11,7 +11,11 @@ struct QuotaGaugeCard: View {
 
     var body: some View {
         HStack(spacing: DS.Space.m) {
-            QuotaRingGauge(remainingPercent: model?.remainingPercent, size: .medium)
+            QuotaRingGauge(
+                remainingPercent: model?.remainingPercent,
+                size: .medium,
+                isUnlimited: model?.isUnlimited ?? false
+            )
 
             VStack(alignment: .leading, spacing: DS.Space.xxs) {
                 Text(title)
@@ -35,9 +39,14 @@ struct QuotaGaugeCard: View {
 
                 if showsReset {
                     HStack(spacing: DS.Space.xxs) {
-                        Image(systemName: "clock.arrow.circlepath")
-                        Text(model?.resetsAt.map { dsResetFormatter.string(from: $0) } ?? "--")
-                            .monospacedDigit()
+                        if model?.isUnlimited == true {
+                            Image(systemName: "infinity")
+                            Text("无需重置")
+                        } else {
+                            Image(systemName: "clock.arrow.circlepath")
+                            Text(model?.resetsAt.map { dsResetFormatter.string(from: $0) } ?? "--")
+                                .monospacedDigit()
+                        }
                     }
                     .font(.callout)
                     .foregroundStyle(.tertiary)

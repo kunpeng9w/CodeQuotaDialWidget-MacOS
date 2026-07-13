@@ -47,16 +47,19 @@ public struct CodexQuotaWindow: Codable, Equatable, Sendable {
     public var usedPercent: Int?
     public var resetsAt: Date?
     public var windowDurationMins: Int?
+    public var isUnlimited: Bool?
 
     public init(
         remainingPercent: Int? = nil,
         usedPercent: Int? = nil,
         resetsAt: Date? = nil,
-        windowDurationMins: Int? = nil
+        windowDurationMins: Int? = nil,
+        isUnlimited: Bool? = nil
     ) {
         self.remainingPercent = remainingPercent
         self.usedPercent = usedPercent
         self.resetsAt = resetsAt
         self.windowDurationMins = windowDurationMins
+        self.isUnlimited = isUnlimited
     }
 }

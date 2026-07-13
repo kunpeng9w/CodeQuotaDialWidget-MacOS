@@ -178,7 +178,11 @@ struct OverviewPanelView: View {
             return [OverviewWindowItem(title: "30 天", remainingPercent: monthly.remainingPercent)]
         }
         return [
-            OverviewWindowItem(title: "5h", remainingPercent: codex.fiveHour?.remainingPercent),
+            OverviewWindowItem(
+                title: "5h",
+                remainingPercent: codex.fiveHour?.remainingPercent,
+                isUnlimited: codex.fiveHour?.isUnlimited == true
+            ),
             OverviewWindowItem(title: "本周", remainingPercent: codex.weekly?.remainingPercent),
         ]
     }

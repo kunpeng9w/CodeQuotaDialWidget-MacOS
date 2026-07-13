@@ -103,7 +103,8 @@ private struct QuotaDialDashboard: View {
             title: title,
             remainingPercent: window.remainingPercent,
             resetsAt: window.resetsAt,
-            tint: tint
+            tint: tint,
+            isUnlimited: window.isUnlimited == true
         )
     }
 }

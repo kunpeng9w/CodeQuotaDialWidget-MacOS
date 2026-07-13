@@ -8,6 +8,7 @@ public struct QuotaDialItem: Identifiable, Sendable {
     public var resetsAt: Date?
     public var tint: Color
     public var detailText: String?
+    public var isUnlimited: Bool
 
     public init(
         id: String,
@@ -15,7 +16,8 @@ public struct QuotaDialItem: Identifiable, Sendable {
         remainingPercent: Int?,
         resetsAt: Date?,
         tint: Color,
-        detailText: String? = nil
+        detailText: String? = nil,
+        isUnlimited: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -23,6 +25,7 @@ public struct QuotaDialItem: Identifiable, Sendable {
         self.resetsAt = resetsAt
         self.tint = tint
         self.detailText = detailText
+        self.isUnlimited = isUnlimited
     }
 }
 
@@ -203,7 +206,12 @@ private struct QuotaDialTile: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
 
-            DialMeter(percent: item.remainingPercent, tint: item.tint, percentFontSize: style.percentFontSize)
+            DialMeter(
+                percent: item.remainingPercent,
+                tint: item.tint,
+                percentFontSize: style.percentFontSize,
+                isUnlimited: item.isUnlimited
+            )
                 .frame(width: style.meterSize, height: style.meterSize)
 
             if let detailText = item.detailText {
@@ -214,7 +222,7 @@ private struct QuotaDialTile: View {
                     .minimumScaleFactor(0.8)
             }
 
-            Text(resetText(item.resetsAt))
+            Text(item.isUnlimited ? "无需重置" : resetText(item.resetsAt))
                 .font(.system(size: style.resetFontSize, weight: .semibold))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -228,6 +236,7 @@ private struct DialMeter: View {
     var percent: Int?
     var tint: Color
     var percentFontSize: CGFloat
+    var isUnlimited: Bool
 
     var body: some View {
         ZStack {
@@ -246,13 +255,21 @@ private struct DialMeter: View {
                 )
 
             VStack(spacing: 1) {
-                Text(percentText(percent))
-                    .font(.system(size: percentFontSize, weight: .bold, design: .rounded))
+                Text(isUnlimited ? "无限制" : percentText(percent))
+                    .font(
+                        .system(
+                            size: isUnlimited ? 18 : percentFontSize,
+                            weight: .bold,
+                            design: .rounded
+                        )
+                    )
                     .minimumScaleFactor(0.72)
                     .lineLimit(1)
-                Text("剩余")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.secondary)
+                if !isUnlimited {
+                    Text("剩余")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }

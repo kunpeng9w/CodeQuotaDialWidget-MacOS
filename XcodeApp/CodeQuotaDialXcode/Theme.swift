@@ -140,6 +140,7 @@ struct QuotaStatModel {
     var usedPercent: Int?
     var absoluteText: String?   // 例如 GLM 的 "remaining/total"
     var resetsAt: Date?
+    var isUnlimited = false
 }
 
 // MARK: - 后台运行状态
@@ -196,4 +197,3 @@ struct StatusDot: View {
         .onChange(of: status) { _, newValue in pulsing = newValue.isPulsing }
     }
 }
-

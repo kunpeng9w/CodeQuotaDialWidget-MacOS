@@ -36,6 +36,7 @@ struct QuotaRingGauge: View {
     var remainingPercent: Int?
     var size: Size = .medium
     var showsCenterLabel = true
+    var isUnlimited = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -69,7 +70,7 @@ struct QuotaRingGauge: View {
             }
 
             if showsCenterLabel {
-                Text(remainingPercent.map { "\($0)%" } ?? "--")
+                Text(isUnlimited ? "无限制" : remainingPercent.map { "\($0)%" } ?? "--")
                     .font(size.labelFont)
                     .foregroundStyle(isUnknown ? Color.secondary : tone.color)
                     .monospacedDigit()
@@ -80,7 +81,9 @@ struct QuotaRingGauge: View {
         }
         .frame(width: size.diameter, height: size.diameter)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.6), value: fraction)
-        .accessibilityLabel(remainingPercent.map { "剩余 \($0)%" } ?? "暂无数据")
+        .accessibilityLabel(
+            isUnlimited ? "无限制" : remainingPercent.map { "剩余 \($0)%" } ?? "暂无数据"
+        )
     }
 }
 

@@ -85,7 +85,8 @@ extension QuotaStatModel {
             remainingPercent: window?.remainingPercent,
             usedPercent: window?.usedPercent,
             absoluteText: nil,
-            resetsAt: window?.resetsAt
+            resetsAt: window?.resetsAt,
+            isUnlimited: window?.isUnlimited == true
         )
     }
 }

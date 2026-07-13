@@ -27,10 +27,49 @@ import Testing
     #expect(snapshot.fiveHour?.remainingPercent == 73)
     #expect(snapshot.fiveHour?.usedPercent == 27)
     #expect(snapshot.fiveHour?.windowDurationMins == 300)
+    #expect(snapshot.fiveHour?.isUnlimited != true)
     #expect(snapshot.weekly?.remainingPercent == 58)
     #expect(snapshot.weekly?.usedPercent == 42)
     #expect(snapshot.weekly?.windowDurationMins == 10_080)
     #expect(snapshot.planType == "plus")
+}
+
+@Test func treatsMissingFiveHourWindowAsUnlimitedWhenWeeklyExists() throws {
+    let body = """
+    {
+      "plan_type": "plus",
+      "rate_limit": {
+        "allowed": true,
+        "limit_reached": false,
+        "primary_window": {
+          "used_percent": 4,
+          "limit_window_seconds": 604800,
+          "reset_after_seconds": 604441,
+          "reset_at": 1784512171
+        },
+        "secondary_window": null
+      },
+      "credits": {
+        "has_credits": false,
+        "unlimited": false
+      }
+    }
+    """
+
+    let snapshot = try CodexQuotaCollector.parseUsageResponse(body)
+
+    #expect(snapshot.fiveHour?.remainingPercent == 100)
+    #expect(snapshot.fiveHour?.usedPercent == nil)
+    #expect(snapshot.fiveHour?.resetsAt == nil)
+    #expect(snapshot.fiveHour?.isUnlimited == true)
+    #expect(snapshot.weekly?.remainingPercent == 96)
+    #expect(snapshot.weekly?.windowDurationMins == 10_080)
+    #expect(snapshot.error == nil)
+    #expect(!snapshot.isRefreshFailure)
+
+    let stored = try JSONEncoder().encode(snapshot)
+    let reloaded = try JSONDecoder().decode(CodexQuotaSnapshot.self, from: stored)
+    #expect(reloaded.fiveHour?.isUnlimited == true)
 }
 
 @Test func clampsRemainingPercent() throws {
@@ -140,4 +179,13 @@ import Testing
     #expect(emptySnapshot.isRefreshFailure)
     #expect(partialSnapshot.isRefreshFailure)
     #expect(!validSnapshot.isRefreshFailure)
+}
+
+@Test func decodesLegacyWindowWithoutUnlimitedFlag() throws {
+    let data = Data(#"{"remainingPercent":70,"usedPercent":30,"windowDurationMins":300}"#.utf8)
+
+    let window = try JSONDecoder().decode(CodexQuotaWindow.self, from: data)
+
+    #expect(window.remainingPercent == 70)
+    #expect(window.isUnlimited == nil)
 }

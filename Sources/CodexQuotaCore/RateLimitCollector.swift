@@ -143,6 +143,14 @@ public struct CodexQuotaCollector: Sendable {
                     weekly = window
                 }
             }
+
+            // The API omits the 5h window while that limit is temporarily disabled.
+            if fiveHour == nil, weekly != nil {
+                fiveHour = CodexQuotaWindow(
+                    remainingPercent: 100,
+                    isUnlimited: true
+                )
+            }
         }
 
         let snapshot = CodexQuotaSnapshot(

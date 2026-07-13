@@ -4,6 +4,7 @@ import SwiftUI
 struct OverviewWindowItem: Identifiable {
     var title: String
     var remainingPercent: Int?
+    var isUnlimited = false
 
     var id: String { title }
 }
@@ -51,7 +52,11 @@ struct ProviderOverviewCard: View {
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.8)
                                     Spacer(minLength: DS.Space.xxs)
-                                    Text(window.remainingPercent.map { "\($0)%" } ?? "--")
+                                    Text(
+                                        window.isUnlimited
+                                            ? "无限制"
+                                            : window.remainingPercent.map { "\($0)%" } ?? "--"
+                                    )
                                         .font(.callout.weight(.semibold))
                                         .monospacedDigit()
                                         .foregroundStyle(
